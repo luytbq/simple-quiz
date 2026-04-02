@@ -7,20 +7,20 @@
 <form method="POST" action="{{bp}}/exam/{{.Attempt.ID}}/submit">
     {{range $i, $q := .Questions}}
     <article>
-        <p><strong>{{add $i 1}}. {{$q.Content}}</strong></p>
+        <div class="question-content"><strong>{{add $i 1}}.</strong> {{md $q.Content}}</div>
         {{if $q.MultiAnswer}}
         <p><small><em>(Chọn nhiều đáp án)</em></small></p>
         {{range $q.Answers}}
         <label>
             <input type="checkbox" name="q_{{$q.ID}}" value="{{.ID}}">
-            {{.Label}}. {{.Content}}
+            {{.Label}}. {{mdi .Content}}
         </label>
         {{end}}
         {{else}}
         {{range $q.Answers}}
         <label>
             <input type="radio" name="q_{{$q.ID}}" value="{{.ID}}">
-            {{.Label}}. {{.Content}}
+            {{.Label}}. {{mdi .Content}}
         </label>
         {{end}}
         {{end}}

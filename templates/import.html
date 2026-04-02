@@ -11,7 +11,7 @@
 
 <article>
     <h3>Import đề thi</h3>
-    <form method="POST" action="{{bp}}/manage">
+    <form method="POST" action="{{bp}}/manage/check">
         <label for="json_data">Paste dữ liệu JSON</label>
         <textarea id="json_data" name="json_data" rows="12" placeholder='{
   "subject": "Tên chủ đề",
@@ -25,7 +25,7 @@
     }
   ]
 }' required></textarea>
-        <button type="submit">Import</button>
+        <button type="submit">Kiểm tra</button>
     </form>
 </article>
 
@@ -48,14 +48,13 @@
             <td>{{.QuestionCount}}</td>
             <td>{{.CreatedAt.Format "02/01/2006"}}</td>
             <td class="actions">
-                <button class="btn-share" onclick="toggleShare('share-{{.ID}}')">Share</button>
+                <button class="btn-share" data-target="share-{{.ID}}">Share</button>
                 <a href="{{bp}}/manage/{{.ID}}/export"
-                   class="btn-export"
-                   onclick="return confirm('Export đề thi \'{{.Name}}\' ra file JSON?')">
+                   class="btn-export" data-name="{{.Name}}">
                     Export
                 </a>
                 <form method="POST" action="{{bp}}/manage/{{.ID}}/delete" style="display:inline"
-                      onsubmit="return confirm('Xoá đề thi \'{{.Name}}\' và toàn bộ {{.QuestionCount}} câu hỏi?\nThao tác này không thể hoàn tác!')">
+                      data-name="{{.Name}}" data-count="{{.QuestionCount}}" class="delete-form">
                     <button type="submit" class="btn-delete">Xoá</button>
                 </form>
             </td>
@@ -67,14 +66,14 @@
                         <label>Link chọn chế độ:</label>
                         <div class="share-link-copy">
                             <input type="text" readonly value="" data-path="{{bp}}/s/{{.ShareCode}}" class="share-input" id="link-mode-{{.ID}}">
-                            <button class="btn-copy" onclick="copyLink('link-mode-{{.ID}}', this)">Copy</button>
+                            <button class="btn-copy" >Copy</button>
                         </div>
                     </div>
                     <div class="share-link-group">
                         <label>Link thi trực tiếp ({{.QuestionCount}} câu):</label>
                         <div class="share-link-copy">
                             <input type="text" readonly value="" data-path="{{bp}}/s/{{.ShareCode}}/start?count={{.QuestionCount}}" class="share-input" id="link-exam-{{.ID}}">
-                            <button class="btn-copy" onclick="copyLink('link-exam-{{.ID}}', this)">Copy</button>
+                            <button class="btn-copy" >Copy</button>
                         </div>
                     </div>
                 </div>
@@ -93,22 +92,46 @@ document.querySelectorAll('.share-input').forEach(el => {
     el.value = location.origin + el.dataset.path;
 });
 
-function toggleShare(id) {
-    const row = document.getElementById(id);
-    row.style.display = row.style.display === 'none' ? '' : 'none';
-}
-
-function copyLink(inputId, btn) {
-    const input = document.getElementById(inputId);
-    navigator.clipboard.writeText(input.value).then(() => {
-        const orig = btn.textContent;
-        btn.textContent = 'Copied!';
-        btn.classList.add('copied');
-        setTimeout(() => {
-            btn.textContent = orig;
-            btn.classList.remove('copied');
-        }, 2000);
+// Share toggle
+document.querySelectorAll('.btn-share').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const row = document.getElementById(btn.dataset.target);
+        row.style.display = row.style.display === 'none' ? '' : 'none';
     });
-}
+});
+
+// Export confirm
+document.querySelectorAll('.btn-export').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+        if (!confirm('Export đề thi "' + btn.dataset.name + '" ra file JSON?')) {
+            e.preventDefault();
+        }
+    });
+});
+
+// Delete confirm
+document.querySelectorAll('.delete-form').forEach(form => {
+    form.addEventListener('submit', (e) => {
+        if (!confirm('Xoá đề thi "' + form.dataset.name + '" và toàn bộ ' + form.dataset.count + ' câu hỏi?\nThao tác này không thể hoàn tác!')) {
+            e.preventDefault();
+        }
+    });
+});
+
+// Copy link
+document.querySelectorAll('.btn-copy').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const input = btn.previousElementSibling;
+        navigator.clipboard.writeText(input.value).then(() => {
+            const orig = btn.textContent;
+            btn.textContent = 'Copied!';
+            btn.classList.add('copied');
+            setTimeout(() => {
+                btn.textContent = orig;
+                btn.classList.remove('copied');
+            }, 2000);
+        });
+    });
+});
 </script>
 {{end}}

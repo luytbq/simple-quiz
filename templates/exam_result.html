@@ -14,7 +14,7 @@
 
 {{range $i, $d := .Details}}
 <article class="{{if $d.IsCorrect}}result-correct{{else}}result-wrong{{end}}">
-    <p><strong>{{add $i 1}}. {{$d.QuestionContent}}</strong></p>
+    <div class="question-content"><strong>{{add $i 1}}.</strong> {{md $d.QuestionContent}}</div>
     {{if $d.SelectedLabels}}
     <p>Bạn chọn: {{range $j, $l := $d.SelectedLabels}}{{if $j}}, {{end}}{{$l}}{{end}}</p>
     {{else}}
@@ -24,7 +24,7 @@
     <p>Đáp án đúng: <strong>{{range $j, $l := $d.CorrectLabels}}{{if $j}}, {{end}}{{$l}}{{end}}</strong></p>
     {{end}}
     {{if $d.Explanation}}
-    <p class="explanation"><em>{{$d.Explanation}}</em></p>
+    <div class="explanation">{{md $d.Explanation}}</div>
     {{end}}
 </article>
 {{end}}

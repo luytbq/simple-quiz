@@ -92,11 +92,11 @@ Questions are imported as JSON with this structure:
 |-------|------|----------|-------------|
 | `subject` | string | yes | Subject/topic name. If it already exists, questions are appended |
 | `questions` | array | yes | List of question objects |
-| `questions[].content` | string | yes | The question text |
-| `questions[].explanation` | string | no | Explanation shown in result review. Only include when the answer is non-obvious or needs clarification |
+| `questions[].content` | string | yes | The question text (supports Markdown: code blocks, bold, images) |
+| `questions[].explanation` | string | no | Explanation shown in result review (supports Markdown). Only include when the answer is non-obvious |
 | `questions[].answers` | array | yes | List of answer options (typically 4) |
 | `questions[].answers[].label` | string | yes | Answer label (e.g. "A", "B", "C", "D") |
-| `questions[].answers[].content` | string | yes | Answer text |
+| `questions[].answers[].content` | string | yes | Answer text (supports inline Markdown: \`code\`, **bold**) |
 | `questions[].answers[].is_correct` | boolean | yes | `true` for the correct answer, `false` otherwise |
 | `questions[].multi_answer` | boolean | no | Set to `true` for multiple correct answers. Auto-detected if omitted (based on number of `is_correct: true` answers) |
 
@@ -107,6 +107,9 @@ Questions are imported as JSON with this structure:
 - `multi_answer` is auto-detected if omitted: questions with 2+ correct answers are automatically treated as multi-answer
 - Labels should be unique within a question (A, B, C, D)
 - There is no limit on the number of answers per question, but 4 is standard
+- Content fields support Markdown: \`inline code\`, \`\`\`code blocks\`\`\`, **bold**, *italic*, > blockquotes
+- Diagrams via Mermaid: use \`\`\`mermaid code blocks (flowchart, UML, ER, sequence diagrams)
+- ASCII art for anything Mermaid can't handle (stack frames, truth tables, trees)
 
 ## Generate Questions with AI
 

@@ -21,21 +21,27 @@
     <h3>3. Loại câu hỏi</h3>
     <p><strong>Một đáp án:</strong> Hiển thị dạng radio button — chọn 1 đáp án duy nhất.</p>
     <p><strong>Nhiều đáp án:</strong> Hiển thị dạng checkbox kèm ghi chú <em>"(Chọn nhiều đáp án)"</em> — phải chọn đúng tất cả đáp án đúng mới được tính điểm.</p>
+    <p><strong>Rich content:</strong> Câu hỏi và đáp án hỗ trợ Markdown — code blocks, in đậm/nghiêng, hình ảnh base64.</p>
 </article>
 
 <article>
     <h3>4. Tạo câu hỏi bằng AI</h3>
-    <p>Copy prompt bên dưới, paste vào ChatGPT / Claude / Gemini, thay chủ đề và số lượng:</p>
+    <p>Chọn loại prompt phù hợp, copy và paste vào ChatGPT / Claude / Gemini. <strong>Nhớ sửa chủ đề, số lượng và các yêu cầu</strong> cho phù hợp trước khi gửi.</p>
+
     <div class="prompt-block">
         <div class="prompt-header">
-            <span>Prompt</span>
-            <button class="copy-btn" onclick="copyPrompt(this)">
+            <div class="prompt-tabs">
+                <button class="prompt-tab active" data-tab="basic">Cơ bản</button>
+                <button class="prompt-tab" data-tab="rich">Rich content</button>
+            </div>
+            <button class="copy-btn" id="copy-prompt-btn">
                 <svg class="icon-copy" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
                 <svg class="icon-check" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><polyline points="20 6 9 17 4 12"/></svg>
                 <span class="copy-label">Copy prompt</span>
             </button>
         </div>
-        <pre class="prompt-content">Tạo bộ câu hỏi trắc nghiệm để ôn tập/luyện thi.
+
+        <pre class="prompt-content active" id="prompt-basic">Tạo bộ câu hỏi trắc nghiệm để ôn tập/luyện thi.
 
 Chủ đề: [CHỦ ĐỀ CỦA BẠN]
 Số lượng câu hỏi: [SỐ LƯỢNG]
@@ -48,7 +54,6 @@ Yêu cầu:
 - Đa dạng độ khó (dễ, trung bình, khó)
 - Bao phủ nhiều khía cạnh của chủ đề
 - Chỉ thêm "explanation" khi đáp án không hiển nhiên
-  hoặc cần giải thích thêm
 
 Chỉ trả về JSON hợp lệ, không giải thích:
 
@@ -67,13 +72,83 @@ Chỉ trả về JSON hợp lệ, không giải thích:
     }
   ]
 }</pre>
+
+        <pre class="prompt-content" id="prompt-rich">Tạo bộ câu hỏi trắc nghiệm để ôn tập/luyện thi.
+
+Chủ đề: [CHỦ ĐỀ]
+Số lượng câu hỏi: [SỐ LƯỢNG]
+Ngôn ngữ: Tiếng Việt
+
+Yêu cầu:
+- Mỗi câu hỏi có đúng 4 đáp án (A, B, C, D)
+- Đa dạng độ khó (dễ, trung bình, khó)
+- Thêm "explanation" khi đáp án không hiển nhiên
+- Nội dung hỗ trợ Markdown. Quy tắc format:
+  + Xuống dòng trong JSON string dùng \n
+  + Code block PHẢI dùng TRIPLE backtick (```),
+    KHÔNG dùng single backtick.
+    Ví dụ: \n```java\ncode here\n```\n
+  + Nếu đáp án là giá trị code ngắn: dùng
+    single backtick cho inline code: "`value`"
+  + Sơ đồ có cấu trúc (flowchart, UML, ER,
+    sequence diagram): dùng ```mermaid block
+  + Minh hoạ khác (stack, bộ nhớ, truth table,
+    cây nhị phân): dùng ASCII art trong ``` block
+
+Chỉ trả về JSON hợp lệ, không giải thích:
+
+{
+  "subject": "[Tên chủ đề]",
+  "questions": [
+    {
+      "content": "Đoạn code sau in ra gì?\n\n```java\nString s = \"hello\";\nSystem.out.println(s.toUpperCase());\n```",
+      "explanation": "`toUpperCase()` trả về **String mới**.",
+      "answers": [
+        {"label": "A", "content": "`HELLO`", "is_correct": true},
+        {"label": "B", "content": "`hello`", "is_correct": false},
+        {"label": "C", "content": "`Hello`", "is_correct": false},
+        {"label": "D", "content": "Lỗi biên dịch", "is_correct": false}
+      ]
+    },
+    {
+      "content": "Sơ đồ sau thể hiện design pattern nào?\n\n```mermaid\nclassDiagram\n  class Subject {\n    +attach(Observer)\n    +notify()\n  }\n  class Observer {\n    +update()\n  }\n  Subject o-- Observer\n```",
+      "answers": [
+        {"label": "A", "content": "Observer", "is_correct": true},
+        {"label": "B", "content": "Strategy", "is_correct": false},
+        {"label": "C", "content": "Factory", "is_correct": false},
+        {"label": "D", "content": "Singleton", "is_correct": false}
+      ]
+    },
+    {
+      "content": "Sau khi thực hiện các thao tác sau, stack có trạng thái gì?\n\n`push(1)`, `push(2)`, `push(3)`, `pop()`\n\n```\n| 2 | ← top\n| 1 |\n+---+\n```\n\nPhần tử nào sẽ được lấy ra khi gọi `pop()` tiếp theo?",
+      "answers": [
+        {"label": "A", "content": "`2`", "is_correct": true},
+        {"label": "B", "content": "`1`", "is_correct": false},
+        {"label": "C", "content": "`3`", "is_correct": false},
+        {"label": "D", "content": "Stack rỗng", "is_correct": false}
+      ]
+    }
+  ]
+}</pre>
     </div>
     <p>Sau khi nhận JSON, paste vào <a href="{{bp}}/manage">trang Import</a> hoặc lưu file rồi chạy <code>./quiz import file.json</code>.</p>
 
     <script>
-    function copyPrompt(btn) {
-        const text = btn.closest('.prompt-block').querySelector('.prompt-content').textContent;
-        navigator.clipboard.writeText(text).then(() => {
+    // Tab switching
+    document.querySelectorAll('.prompt-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+            document.querySelectorAll('.prompt-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.prompt-content').forEach(c => c.classList.remove('active'));
+            tab.classList.add('active');
+            document.getElementById('prompt-' + tab.dataset.tab).classList.add('active');
+        });
+    });
+
+    // Copy active prompt
+    document.getElementById('copy-prompt-btn').addEventListener('click', function() {
+        const active = document.querySelector('.prompt-content.active');
+        const btn = this;
+        navigator.clipboard.writeText(active.textContent).then(() => {
             btn.querySelector('.icon-copy').style.display = 'none';
             btn.querySelector('.icon-check').style.display = 'inline';
             btn.querySelector('.copy-label').textContent = 'Copied!';
@@ -81,11 +156,11 @@ Chỉ trả về JSON hợp lệ, không giải thích:
             setTimeout(() => {
                 btn.querySelector('.icon-copy').style.display = 'inline';
                 btn.querySelector('.icon-check').style.display = 'none';
-                btn.querySelector('.copy-label').textContent = 'Copy';
+                btn.querySelector('.copy-label').textContent = 'Copy prompt';
                 btn.classList.remove('copied');
             }, 2000);
         });
-    }
+    });
     </script>
 </article>
 

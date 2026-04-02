@@ -5,7 +5,7 @@
 </hgroup>
 
 <article>
-    <p><strong>{{.Question.Content}}</strong></p>
+    <div class="question-content">{{md .Question.Content}}</div>
 
     {{if .IsCorrect}}
     <p class="correct-answer">✓ Chính xác!</p>
@@ -18,7 +18,7 @@
     {{if .Question.Explanation}}
     <details>
         <summary>Giải thích</summary>
-        <p>{{.Question.Explanation}}</p>
+        <div>{{md .Question.Explanation}}</div>
     </details>
     {{end}}
 

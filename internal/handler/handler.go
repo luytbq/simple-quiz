@@ -1,18 +1,43 @@
 package handler
 
 import (
+	"bytes"
 	"fmt"
 	"html/template"
 	"io/fs"
 	"log/slog"
 	"net/http"
+	"regexp"
 	"strconv"
+	"strings"
 	"time"
 
+	"github.com/microcosm-cc/bluemonday"
+	"github.com/yuin/goldmark"
 	"quiz/internal/service"
 )
 
 var buildVersion = fmt.Sprintf("%d", time.Now().Unix())
+
+var mdRenderer = goldmark.New()
+
+var sanitizePolicy = func() *bluemonday.Policy {
+	p := bluemonday.UGCPolicy()
+	p.AllowAttrs("class").OnElements("code", "pre", "span", "div")
+	return p
+}()
+
+var mermaidBlockRe = regexp.MustCompile(`<pre><code class="language-mermaid">([\s\S]*?)</code></pre>`)
+
+func convertMermaidBlocks(html string) string {
+	return mermaidBlockRe.ReplaceAllStringFunc(html, func(match string) string {
+		inner := mermaidBlockRe.FindStringSubmatch(match)
+		if len(inner) < 2 {
+			return match
+		}
+		return `<div class="mermaid">` + inner[1] + `</div>`
+	})
+}
 
 type Handler struct {
 	Questions *service.QuestionService
@@ -36,12 +61,30 @@ func New(qs *service.QuestionService, as *service.AttemptService, templateFS fs.
 		},
 		"bp": func() string { return basePath },
 		"v":  func() string { return buildVersion },
+		"md": func(s string) template.HTML {
+			var buf bytes.Buffer
+			mdRenderer.Convert([]byte(s), &buf)
+			safe := sanitizePolicy.SanitizeBytes(buf.Bytes())
+			result := convertMermaidBlocks(string(safe))
+			return template.HTML(result)
+		},
+		"mdi": func(s string) template.HTML {
+			var buf bytes.Buffer
+			mdRenderer.Convert([]byte(s), &buf)
+			safe := sanitizePolicy.SanitizeBytes(buf.Bytes())
+			// Strip wrapping <p>...</p> for inline use
+			str := string(safe)
+			str = strings.TrimSpace(str)
+			str = strings.TrimPrefix(str, "<p>")
+			str = strings.TrimSuffix(str, "</p>")
+			return template.HTML(str)
+		},
 	}
 
 	pages := []string{
 		"home.html", "practice.html", "practice_result.html",
 		"exam_setup.html", "exam.html", "exam_result.html",
-		"import.html", "stats.html", "stats_detail.html", "guide.html", "share.html",
+		"import.html", "import_preview.html", "stats.html", "stats_detail.html", "guide.html", "share.html",
 	}
 
 	templates := make(map[string]*template.Template)
@@ -61,6 +104,8 @@ func New(qs *service.QuestionService, as *service.AttemptService, templateFS fs.
 }
 
 func (h *Handler) render(w http.ResponseWriter, name string, data any) {
+	w.Header().Set("Content-Security-Policy", "default-src 'self'; img-src 'self'; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net")
+
 	tmpl, ok := h.templates[name]
 	if !ok {
 		slog.Error("template not found", "name", name)
@@ -79,7 +124,8 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 
 	// Manage
 	mux.HandleFunc("GET /manage", h.ImportForm)
-	mux.HandleFunc("POST /manage", h.ImportSubmit)
+	mux.HandleFunc("POST /manage/check", h.CheckImport)
+	mux.HandleFunc("POST /manage/confirm", h.ConfirmImport)
 	mux.HandleFunc("POST /manage/{subjectID}/delete", h.DeleteSubject)
 	mux.HandleFunc("GET /manage/{subjectID}/export", h.ExportSubject)
 

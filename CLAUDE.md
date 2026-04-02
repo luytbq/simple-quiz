@@ -18,6 +18,13 @@ DB_PATH=./quiz.db PORT=8080 ./quiz
 
 # Docker
 docker compose up --build
+
+# Run all tests
+go test ./...
+
+# Run tests for a specific package
+go test ./internal/service/ -v
+go test ./internal/handler/ -v
 ```
 
 ## Architecture
@@ -55,6 +62,7 @@ Single-binary Go web app (Go 1.22+ ServeMux, html/template, modernc.org/sqlite).
 ## Rules
 
 - When adding or updating features, always check and update the guide page (`templates/guide.html`) and README files if the change affects user-facing behavior or input specs.
+- When adding or modifying service/handler logic, add or update unit tests. Tests use in-memory SQLite (`file:testN?mode=memory&cache=shared`). Run `go test ./...` before committing.
 
 **Key behaviors**:
 - Flashcard mode avoids repeat questions by tracking answered IDs in `attempt_answers` and excluding them via `NOT IN`

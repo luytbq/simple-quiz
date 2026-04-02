@@ -23,6 +23,8 @@
     <main class="container">
         {{template "content" .}}
     </main>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+    <script>mermaid.initialize({startOnLoad: true, theme: 'default'});</script>
 </body>
 </html>
 {{end}}

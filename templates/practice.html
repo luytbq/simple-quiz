@@ -5,7 +5,7 @@
 </hgroup>
 
 <article>
-    <p><strong>{{.Question.Content}}</strong></p>
+    <div class="question-content">{{md .Question.Content}}</div>
     {{if .Question.MultiAnswer}}
     <p><small><em>(Chọn nhiều đáp án)</em></small></p>
     {{end}}
@@ -18,14 +18,14 @@
         {{range .Question.Answers}}
         <label>
             <input type="checkbox" name="answer_id" value="{{.ID}}">
-            {{.Label}}. {{.Content}}
+            {{.Label}}. {{mdi .Content}}
         </label>
         {{end}}
         {{else}}
         {{range .Question.Answers}}
         <label>
             <input type="radio" name="answer_id" value="{{.ID}}" required>
-            {{.Label}}. {{.Content}}
+            {{.Label}}. {{mdi .Content}}
         </label>
         {{end}}
         {{end}}

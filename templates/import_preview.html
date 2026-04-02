@@ -1,0 +1,73 @@
+{{define "content"}}
+
+{{if .Failed}}
+<h2>Import thất bại</h2>
+
+<article class="msg-error">
+    {{.HelpHTML}}
+</article>
+
+{{if .Changes}}
+<article>
+    <h4>Các chỉnh sửa đã thực hiện trước khi kiểm tra:</h4>
+    <ul>
+        {{range .Changes}}
+        <li>{{.}}</li>
+        {{end}}
+    </ul>
+</article>
+{{end}}
+
+<div class="grid">
+    <a href="{{bp}}/manage" role="button" class="outline">← Quay lại sửa</a>
+</div>
+
+{{else}}
+<h2>Preview Import: "{{.Data.Subject}}"</h2>
+<p>{{len .Data.Questions}} câu hỏi</p>
+
+{{if .Changes}}
+<article>
+    <h4>Các chỉnh sửa tự động:</h4>
+    <ul>
+        {{range .Changes}}
+        <li>{{.}}</li>
+        {{end}}
+    </ul>
+</article>
+{{else}}
+<article class="msg-success">Dữ liệu hợp lệ, không cần chỉnh sửa.</article>
+{{end}}
+
+<h3>Preview câu hỏi</h3>
+
+{{range $i, $q := .Preview}}
+{{if lt $i 3}}
+<article>
+    <div class="question-content"><strong>{{add $i 1}}.</strong> {{md $q.Content}}</div>
+    {{if $q.Explanation}}
+    <div class="explanation"><em>{{md $q.Explanation}}</em></div>
+    {{end}}
+    {{range $q.Answers}}
+    <div style="margin-left: 1rem;">
+        {{if .IsCorrect}}<strong>{{.Label}}. {{mdi .Content}} ✓</strong>{{else}}{{.Label}}. {{mdi .Content}}{{end}}
+    </div>
+    {{end}}
+</article>
+{{end}}
+{{end}}
+
+{{if gt (len .Preview) 3}}
+<p><em>... và {{add (len .Preview) -3}} câu nữa</em></p>
+{{end}}
+
+<form method="POST" action="{{bp}}/manage/confirm">
+    <textarea name="refined_json" hidden>{{.RefinedJSON}}</textarea>
+    <div class="grid">
+        <a href="{{bp}}/manage" role="button" class="outline">← Quay lại</a>
+        <button type="submit">Xác nhận Import</button>
+    </div>
+</form>
+{{end}}
+
+{{end}}
