@@ -8,20 +8,34 @@
 <h2>Chủ đề</h2>
 
 {{if .Subjects}}
-<div class="grid">
+<input type="search" id="search-home" placeholder="Tìm kiếm chủ đề..." class="search-box">
+<div id="subject-list">
     {{range .Subjects}}
-    <article>
-        <header>
+    <article class="subject-card" data-name="{{.Name}}">
+        <div class="subject-info">
             <strong>{{.Name}}</strong>
-            <small> — {{.QuestionCount}} câu hỏi</small>
-        </header>
-        <div class="grid">
+            <small>{{.QuestionCount}} câu hỏi</small>
+        </div>
+        <div class="subject-actions">
             <a href="{{bp}}/practice/{{.ID}}" role="button">Flashcard</a>
             <a href="{{bp}}/exam/{{.ID}}" role="button" class="outline">Thi thử</a>
         </div>
     </article>
     {{end}}
 </div>
+<p id="no-results" style="display:none">Không tìm thấy chủ đề nào.</p>
+<script>
+document.getElementById('search-home').addEventListener('input', function() {
+    const q = this.value.toLowerCase();
+    let visible = 0;
+    document.querySelectorAll('.subject-card').forEach(card => {
+        const match = card.dataset.name.toLowerCase().includes(q);
+        card.style.display = match ? '' : 'none';
+        if (match) visible++;
+    });
+    document.getElementById('no-results').style.display = visible === 0 ? '' : 'none';
+});
+</script>
 {{else}}
 <p>Chưa có chủ đề nào. <a href="{{bp}}/manage">Import câu hỏi</a> để bắt đầu.</p>
 {{end}}

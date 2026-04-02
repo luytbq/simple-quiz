@@ -32,7 +32,8 @@
 <h3>Danh sách đề thi</h3>
 
 {{if .Subjects}}
-<table>
+<input type="search" id="search-manage" placeholder="Tìm kiếm đề thi..." class="search-box">
+<table id="manage-table">
     <thead>
         <tr>
             <th>Chủ đề</th>
@@ -43,7 +44,7 @@
     </thead>
     <tbody>
         {{range .Subjects}}
-        <tr>
+        <tr class="subject-row" data-name="{{.Name}}">
             <td>{{.Name}}</td>
             <td>{{.QuestionCount}}</td>
             <td>{{.CreatedAt.Format "02/01/2006"}}</td>
@@ -59,7 +60,7 @@
                 </form>
             </td>
         </tr>
-        <tr class="share-row" id="share-{{.ID}}" style="display:none">
+        <tr class="share-row" id="share-{{.ID}}" data-name="{{.Name}}" style="display:none">
             <td colspan="4">
                 <div class="share-links">
                     <div class="share-link-group">
@@ -82,11 +83,32 @@
         {{end}}
     </tbody>
 </table>
+<p id="no-results-manage" style="display:none">Không tìm thấy đề thi nào.</p>
 {{else}}
 <p>Chưa có đề thi nào.</p>
 {{end}}
 
 <script>
+// Search
+var searchManage = document.getElementById('search-manage');
+if (searchManage) {
+    searchManage.addEventListener('input', function() {
+        const q = this.value.toLowerCase();
+        let visible = 0;
+        document.querySelectorAll('.subject-row').forEach(row => {
+            const match = row.dataset.name.toLowerCase().includes(q);
+            row.style.display = match ? '' : 'none';
+            // Also hide/show associated share row
+            const shareRow = row.nextElementSibling;
+            if (shareRow && shareRow.classList.contains('share-row')) {
+                if (!match) shareRow.style.display = 'none';
+            }
+            if (match) visible++;
+        });
+        document.getElementById('no-results-manage').style.display = visible === 0 ? '' : 'none';
+    });
+}
+
 // Build full URLs from data-path
 document.querySelectorAll('.share-input').forEach(el => {
     el.value = location.origin + el.dataset.path;

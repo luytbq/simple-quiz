@@ -27,6 +27,9 @@ SERVICE_NAME="quiz"
 BASE_PATH="/exams"
 PORT="8081"
 
+echo "==> Running tests..."
+go test ./... || { echo "Tests failed. Aborting deploy."; exit 1; }
+
 echo "==> Building for linux/amd64..."
 GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o "${APP_NAME}-linux" .
 

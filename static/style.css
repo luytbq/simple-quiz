@@ -78,6 +78,35 @@ article img {
     border-left: 4px solid #e74c3c;
 }
 
+.search-box {
+    margin-bottom: 1rem;
+}
+
+.subject-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.5rem;
+}
+
+.subject-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.subject-actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-shrink: 0;
+}
+
+.subject-actions a {
+    margin: 0;
+    padding: 8px 20px;
+    width: auto;
+}
+
 article label {
     cursor: pointer;
     padding: 2px 4px;

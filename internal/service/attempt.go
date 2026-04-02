@@ -263,7 +263,7 @@ func (s *AttemptService) GetRecentAttempts(subjectID int64, limit int) ([]db.Exa
 		       ea.correct_count, ea.started_at, ea.finished_at
 		FROM exam_attempts ea
 		JOIN subjects s ON s.id = ea.subject_id
-		WHERE ea.subject_id = ? AND ea.finished_at IS NOT NULL
+		WHERE ea.subject_id = ? AND ea.finished_at IS NOT NULL AND ea.score > 0
 		ORDER BY ea.finished_at DESC
 		LIMIT ?
 	`, subjectID, limit)
@@ -291,7 +291,7 @@ func (s *AttemptService) GetSubjectStats(subjectID int64) (*db.SubjectStats, err
 	err := s.DB.QueryRow(`
 		SELECT COUNT(*), COALESCE(AVG(score), 0), COALESCE(MAX(score), 0)
 		FROM exam_attempts
-		WHERE subject_id = ? AND finished_at IS NOT NULL
+		WHERE subject_id = ? AND finished_at IS NOT NULL AND score > 0
 	`, subjectID).Scan(&stats.TotalAttempts, &stats.AvgScore, &stats.BestScore)
 	if err != nil {
 		return nil, err
