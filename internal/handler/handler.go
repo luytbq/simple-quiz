@@ -7,9 +7,12 @@ import (
 	"log/slog"
 	"net/http"
 	"strconv"
+	"time"
 
 	"quiz/internal/service"
 )
+
+var buildVersion = fmt.Sprintf("%d", time.Now().Unix())
 
 type Handler struct {
 	Questions *service.QuestionService
@@ -32,6 +35,7 @@ func New(qs *service.QuestionService, as *service.AttemptService, templateFS fs.
 			return s
 		},
 		"bp": func() string { return basePath },
+		"v":  func() string { return buildVersion },
 	}
 
 	pages := []string{

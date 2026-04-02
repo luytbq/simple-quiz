@@ -66,14 +66,14 @@
                     <div class="share-link-group">
                         <label>Link chọn chế độ:</label>
                         <div class="share-link-copy">
-                            <input type="text" readonly value="{{bp}}/s/{{.ShareCode}}" class="share-input" id="link-mode-{{.ID}}">
+                            <input type="text" readonly value="" data-path="{{bp}}/s/{{.ShareCode}}" class="share-input" id="link-mode-{{.ID}}">
                             <button class="btn-copy" onclick="copyLink('link-mode-{{.ID}}', this)">Copy</button>
                         </div>
                     </div>
                     <div class="share-link-group">
                         <label>Link thi trực tiếp ({{.QuestionCount}} câu):</label>
                         <div class="share-link-copy">
-                            <input type="text" readonly value="{{bp}}/s/{{.ShareCode}}/start?count={{.QuestionCount}}" class="share-input" id="link-exam-{{.ID}}">
+                            <input type="text" readonly value="" data-path="{{bp}}/s/{{.ShareCode}}/start?count={{.QuestionCount}}" class="share-input" id="link-exam-{{.ID}}">
                             <button class="btn-copy" onclick="copyLink('link-exam-{{.ID}}', this)">Copy</button>
                         </div>
                     </div>
@@ -88,9 +88,9 @@
 {{end}}
 
 <script>
-// Prepend origin to share links
+// Build full URLs from data-path
 document.querySelectorAll('.share-input').forEach(el => {
-    el.value = location.origin + el.value;
+    el.value = location.origin + el.dataset.path;
 });
 
 function toggleShare(id) {

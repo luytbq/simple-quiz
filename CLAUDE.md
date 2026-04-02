@@ -52,6 +52,10 @@ Single-binary Go web app (Go 1.22+ ServeMux, html/template, modernc.org/sqlite).
 }
 ```
 
+## Rules
+
+- When adding or updating features, always check and update the guide page (`templates/guide.html`) and README files if the change affects user-facing behavior or input specs.
+
 **Key behaviors**:
 - Flashcard mode avoids repeat questions by tracking answered IDs in `attempt_answers` and excluding them via `NOT IN`
 - Answer order is shuffled at read time (not stored), using `math/rand/v2`
