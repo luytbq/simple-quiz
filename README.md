@@ -25,142 +25,138 @@ docker compose up --build
 # Open http://localhost:8080
 ```
 
-Data is persisted in a Docker volume. To import questions inside the container:
-
-```bash
-docker compose exec quiz ./quiz import /data/questions.json
-```
-
 ### Environment Variables
 
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `PORT` | `8080` | Server port |
 | `DB_PATH` | `quiz.db` | SQLite database file path |
+| `BASE_PATH` | (empty) | URL prefix for reverse proxy (e.g. `/exams`) |
 
 ## Usage
 
 ### Import Questions
 
-**CLI:**
+**Web UI:** Go to `/manage`, paste JSON, click "Kiểm tra" to preview, then "Xác nhận Import".
 
-```bash
-./quiz import questions.json
-```
+**CLI:** `./quiz import questions.json`
 
-**Web UI:**
-
-Go to `http://localhost:8080/import`, paste JSON into the textarea, and submit.
-
-If the subject already exists, new questions will be appended to it.
+The app auto-fixes common issues: strips markdown wrappers, trailing commas, extra text around JSON, and single-backtick code blocks.
 
 ### Practice Modes
 
-**Flashcard** — Answer one question at a time, see the result immediately, then move to the next. Questions are shuffled and not repeated within a session.
+**Flashcard** — One question at a time, instant feedback, no repeats within a session.
 
-**Exam** — Choose the number of questions, answer all of them, submit, and get a score with a full review of correct/incorrect answers.
+**Exam** — Choose question count, answer all, submit, get score + full review.
 
-### Statistics
+### Share
 
-View per-subject accuracy, attempt history, and best/average scores at `/stats`.
+Each subject gets a share link (`/s/{code}`). Anyone with the link can practice — no login needed.
 
-## Input Specs
+---
 
-Questions are imported as JSON with this structure:
+## Question JSON Specification
+
+> **For AI agents:** This section is the complete specification for generating question sets. Read this section to produce valid JSON output. No other context is needed.
+
+### Schema
 
 ```json
 {
-  "subject": "Subject Name",
+  "subject": "string (required) — topic name",
   "questions": [
     {
-      "content": "Question text goes here?",
-      "explanation": "Optional explanation shown after answering",
+      "content": "string (required) — question text, supports Markdown",
+      "explanation": "string (optional) — shown after answering, only when answer is non-obvious",
+      "multi_answer": "boolean (optional) — auto-detected if omitted",
       "answers": [
-        {"label": "A", "content": "First option", "is_correct": false},
-        {"label": "B", "content": "Second option", "is_correct": true},
-        {"label": "C", "content": "Third option", "is_correct": false},
-        {"label": "D", "content": "Fourth option", "is_correct": false}
+        {
+          "label": "string (required) — e.g. A, B, C, D",
+          "content": "string (required) — answer text, supports inline Markdown",
+          "is_correct": "boolean (required) — true for correct answer(s)"
+        }
       ]
     }
   ]
 }
 ```
 
-### Field Reference
+### Validation Rules
 
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `subject` | string | yes | Subject/topic name. If it already exists, questions are appended |
-| `questions` | array | yes | List of question objects |
-| `questions[].content` | string | yes | The question text (supports Markdown: code blocks, bold, images) |
-| `questions[].explanation` | string | no | Explanation shown in result review (supports Markdown). Only include when the answer is non-obvious |
-| `questions[].answers` | array | yes | List of answer options (typically 4) |
-| `questions[].answers[].label` | string | yes | Answer label (e.g. "A", "B", "C", "D") |
-| `questions[].answers[].content` | string | yes | Answer text (supports inline Markdown: \`code\`, **bold**) |
-| `questions[].answers[].is_correct` | boolean | yes | `true` for the correct answer, `false` otherwise |
-| `questions[].multi_answer` | boolean | no | Set to `true` for multiple correct answers. Auto-detected if omitted (based on number of `is_correct: true` answers) |
+1. `subject`: non-empty string
+2. `questions`: non-empty array
+3. Each question must have `content` (non-empty) and `answers` (>= 2 items)
+4. Each answer must have `label` (unique within question), `content`, and `is_correct`
+5. Each question must have **at least one** answer with `is_correct: true`
+6. If multiple answers have `is_correct: true`, the question is automatically treated as multi-answer (checkboxes instead of radio buttons)
 
-### Rules
+### Markdown Formatting
 
-- Each question must have **at least one** answer with `is_correct: true`
-- For multi-answer questions, multiple answers can have `is_correct: true` — the app will display checkboxes instead of radio buttons
-- `multi_answer` is auto-detected if omitted: questions with 2+ correct answers are automatically treated as multi-answer
-- Labels should be unique within a question (A, B, C, D)
-- There is no limit on the number of answers per question, but 4 is standard
-- Content fields support Markdown: \`inline code\`, \`\`\`code blocks\`\`\`, **bold**, *italic*, > blockquotes
-- Diagrams via Mermaid: use \`\`\`mermaid code blocks (flowchart, UML, ER, sequence diagrams)
-- ASCII art for anything Mermaid can't handle (stack frames, truth tables, trees)
+Content fields (`content`, `explanation`) support Markdown rendered server-side. Rules:
 
-## Generate Questions with AI
+| Element | Syntax in JSON string | Use when |
+|---------|----------------------|----------|
+| Code block | `\n```java\ncode\n```\n` | Question contains source code |
+| Inline code | `` `value` `` | Answer is a code value |
+| Bold | `**text**` | Emphasis |
+| Mermaid diagram | `\n```mermaid\ngraph TD;\nA-->B;\n```\n` | Structured diagrams: flowchart, UML, ER, sequence |
+| ASCII art | `\n```\n[diagram]\n```\n` | Diagrams Mermaid can't render: stack, memory, truth table, binary tree |
 
-Copy the prompt below and paste it into any LLM (ChatGPT, Claude, Gemini, etc.). Replace the placeholders with your desired topic and quantity.
+**Critical:** Code blocks MUST use triple backticks (` ``` `), NOT single backticks. Newlines in JSON strings use `\n`.
 
----
+### Complete Example
 
-<pre>
-Generate a set of multiple-choice questions for study/practice purposes.
-
-Topic: [YOUR TOPIC HERE]
-Number of questions: [NUMBER]
-Language: [Vietnamese / English / ...]
-
-Requirements:
-- Each question has exactly 4 answer options (A, B, C, D)
-- Most questions have exactly one correct answer. Some questions may have multiple correct answers — for those, mark all correct answers with "is_correct": true
-- Questions should vary in difficulty (easy, medium, hard)
-- Cover different aspects of the topic
-- Avoid trick questions; focus on testing real understanding
-- Only add "explanation" field when the answer is non-obvious, tricky, or needs clarification. Do NOT add explanation for straightforward questions.
-
-Output ONLY valid JSON in this exact format, no explanation or markdown:
-
+```json
 {
-  "subject": "[Topic Name]",
+  "subject": "Java OOP",
   "questions": [
     {
-      "content": "Question text?",
-      "explanation": "Only if needed - explain why the answer is correct",
+      "content": "What does this code print?\n\n```java\nString s = \"hello\";\nSystem.out.println(s.toUpperCase());\n```",
+      "explanation": "`toUpperCase()` returns a **new String**, does not modify the original.",
       "answers": [
-        {"label": "A", "content": "Option A", "is_correct": false},
-        {"label": "B", "content": "Option B", "is_correct": true},
-        {"label": "C", "content": "Option C", "is_correct": false},
-        {"label": "D", "content": "Option D", "is_correct": false}
+        {"label": "A", "content": "`HELLO`", "is_correct": true},
+        {"label": "B", "content": "`hello`", "is_correct": false},
+        {"label": "C", "content": "`Hello`", "is_correct": false},
+        {"label": "D", "content": "Compilation error", "is_correct": false}
+      ]
+    },
+    {
+      "content": "Which diagram represents the Observer pattern?\n\n```mermaid\nclassDiagram\n  class Subject {\n    +attach(Observer)\n    +notify()\n  }\n  class Observer {\n    +update()\n  }\n  Subject o-- Observer\n```",
+      "answers": [
+        {"label": "A", "content": "Observer", "is_correct": true},
+        {"label": "B", "content": "Strategy", "is_correct": false},
+        {"label": "C", "content": "Factory", "is_correct": false},
+        {"label": "D", "content": "Singleton", "is_correct": false}
+      ]
+    },
+    {
+      "content": "After `push(1)`, `push(2)`, `push(3)`, `pop()`, the stack is:\n\n```\n| 2 | ← top\n| 1 |\n+---+\n```\n\nWhat does the next `pop()` return?",
+      "answers": [
+        {"label": "A", "content": "`2`", "is_correct": true},
+        {"label": "B", "content": "`1`", "is_correct": false},
+        {"label": "C", "content": "`3`", "is_correct": false},
+        {"label": "D", "content": "Stack is empty", "is_correct": false}
+      ]
+    },
+    {
+      "content": "Which are valid access modifiers in Java?",
+      "multi_answer": true,
+      "answers": [
+        {"label": "A", "content": "`public`", "is_correct": true},
+        {"label": "B", "content": "`private`", "is_correct": true},
+        {"label": "C", "content": "`internal`", "is_correct": false},
+        {"label": "D", "content": "`protected`", "is_correct": true}
       ]
     }
   ]
 }
-</pre>
+```
 
----
+### Generating Questions with AI
 
-**Example usage:**
+Give the AI agent the following information:
+1. The **topic** and **number of questions**
+2. The **JSON specification** above (or a link to this README)
+3. Save the output to a `.json` file and run `./quiz import file.json`, or paste into the web UI at `/manage`
 
-> Generate a set of multiple-choice questions for study/practice purposes.
->
-> Topic: AWS Solutions Architect Associate - S3 & Storage Services
-> Number of questions: 20
-> Language: English
-
-After the LLM responds with JSON, either:
-1. Save it to a file and run `./quiz import file.json`
-2. Paste it directly into the web import form at `/import`
+The app's import flow auto-corrects common AI output issues (markdown wrappers, trailing commas, wrong backtick usage).
