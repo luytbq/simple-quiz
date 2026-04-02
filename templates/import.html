@@ -1,0 +1,38 @@
+{{define "content"}}
+<h2>Import câu hỏi</h2>
+
+{{if .Error}}
+<article style="background: var(--pico-del-color); padding: 1rem;">
+    {{.Error}}
+</article>
+{{end}}
+
+{{if .Success}}
+<article style="background: var(--pico-ins-color); padding: 1rem;">
+    {{.Success}}
+</article>
+{{end}}
+
+<article>
+    <form method="POST" action="/import">
+        <label for="json_data">Paste dữ liệu JSON</label>
+        <textarea id="json_data" name="json_data" rows="15" placeholder='{
+  "subject": "Tên chủ đề",
+  "questions": [
+    {
+      "content": "Nội dung câu hỏi?",
+      "explanation": "Giải thích (tùy chọn)",
+      "answers": [
+        {"label": "A", "content": "Đáp án 1", "is_correct": false},
+        {"label": "B", "content": "Đáp án 2", "is_correct": true},
+        {"label": "C", "content": "Đáp án 3", "is_correct": false},
+        {"label": "D", "content": "Đáp án 4", "is_correct": false}
+      ]
+    }
+  ]
+}' required></textarea>
+
+        <button type="submit">Import</button>
+    </form>
+</article>
+{{end}}

@@ -1,0 +1,36 @@
+{{define "content"}}
+<hgroup>
+    <h2>{{.Subject.Name}} — Flashcard</h2>
+    <p>Câu {{.Progress}} / {{.Total}}</p>
+</hgroup>
+
+<article>
+    <p><strong>{{.Question.Content}}</strong></p>
+    {{if .Question.MultiAnswer}}
+    <p><small><em>(Chọn nhiều đáp án)</em></small></p>
+    {{end}}
+
+    <form method="POST" action="/practice/{{.Subject.ID}}/answer">
+        <input type="hidden" name="attempt_id" value="{{.AttemptID}}">
+        <input type="hidden" name="question_id" value="{{.Question.ID}}">
+
+        {{if .Question.MultiAnswer}}
+        {{range .Question.Answers}}
+        <label>
+            <input type="checkbox" name="answer_id" value="{{.ID}}">
+            {{.Label}}. {{.Content}}
+        </label>
+        {{end}}
+        {{else}}
+        {{range .Question.Answers}}
+        <label>
+            <input type="radio" name="answer_id" value="{{.ID}}" required>
+            {{.Label}}. {{.Content}}
+        </label>
+        {{end}}
+        {{end}}
+
+        <button type="submit">Trả lời</button>
+    </form>
+</article>
+{{end}}

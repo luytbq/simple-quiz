@@ -1,0 +1,28 @@
+{{define "content"}}
+{{if .Imported}}
+<article style="background: var(--pico-ins-color); padding: 1rem; margin-bottom: 1rem;">
+    {{.Imported}}
+</article>
+{{end}}
+
+<h2>Chủ đề</h2>
+
+{{if .Subjects}}
+<div class="grid">
+    {{range .Subjects}}
+    <article>
+        <header>
+            <strong>{{.Name}}</strong>
+            <small> — {{.QuestionCount}} câu hỏi</small>
+        </header>
+        <div class="grid">
+            <a href="/practice/{{.ID}}" role="button">Flashcard</a>
+            <a href="/exam/{{.ID}}" role="button" class="outline">Thi thử</a>
+        </div>
+    </article>
+    {{end}}
+</div>
+{{else}}
+<p>Chưa có chủ đề nào. <a href="/import">Import câu hỏi</a> để bắt đầu.</p>
+{{end}}
+{{end}}

@@ -1,0 +1,13 @@
+services:
+  quiz:
+    build: .
+    ports:
+      - "8080:8080"
+    volumes:
+      - quiz-data:/data
+    environment:
+      - DB_PATH=/data/quiz.db
+      - PORT=8080
+
+volumes:
+  quiz-data:

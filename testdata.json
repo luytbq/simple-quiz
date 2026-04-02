@@ -1,0 +1,50 @@
+{
+  "subject": "Go Programming",
+  "questions": [
+    {
+      "content": "Which keyword is used to declare a variable in Go?",
+      "answers": [
+        {"label": "A", "content": "let", "is_correct": false},
+        {"label": "B", "content": "var", "is_correct": true},
+        {"label": "C", "content": "dim", "is_correct": false},
+        {"label": "D", "content": "define", "is_correct": false}
+      ]
+    },
+    {
+      "content": "What is the zero value of a string in Go?",
+      "answers": [
+        {"label": "A", "content": "nil", "is_correct": false},
+        {"label": "B", "content": "null", "is_correct": false},
+        {"label": "C", "content": "\"\" (empty string)", "is_correct": true},
+        {"label": "D", "content": "undefined", "is_correct": false}
+      ]
+    },
+    {
+      "content": "Which of the following is NOT a valid Go data type?",
+      "answers": [
+        {"label": "A", "content": "int", "is_correct": false},
+        {"label": "B", "content": "float64", "is_correct": false},
+        {"label": "C", "content": "char", "is_correct": true},
+        {"label": "D", "content": "rune", "is_correct": false}
+      ]
+    },
+    {
+      "content": "What does the defer keyword do in Go?",
+      "answers": [
+        {"label": "A", "content": "Delays execution until the surrounding function returns", "is_correct": true},
+        {"label": "B", "content": "Creates a new goroutine", "is_correct": false},
+        {"label": "C", "content": "Defines a constant", "is_correct": false},
+        {"label": "D", "content": "Handles errors", "is_correct": false}
+      ]
+    },
+    {
+      "content": "How do you start a goroutine?",
+      "answers": [
+        {"label": "A", "content": "thread func()", "is_correct": false},
+        {"label": "B", "content": "async func()", "is_correct": false},
+        {"label": "C", "content": "go func()", "is_correct": true},
+        {"label": "D", "content": "spawn func()", "is_correct": false}
+      ]
+    }
+  ]
+}

@@ -1,0 +1,46 @@
+{{define "content"}}
+<h2>{{.Stats.Subject.Name}} — Thống kê</h2>
+
+<div class="grid">
+    <article>
+        <h4>Tổng lượt thi</h4>
+        <p>{{.Stats.TotalAttempts}}</p>
+    </article>
+    <article>
+        <h4>Điểm trung bình</h4>
+        <p>{{percent .Stats.AvgScore}}</p>
+    </article>
+    <article>
+        <h4>Điểm cao nhất</h4>
+        <p>{{percent .Stats.BestScore}}</p>
+    </article>
+</div>
+
+{{if .Stats.RecentAttempts}}
+<h3>Lịch sử gần đây</h3>
+<table>
+    <thead>
+        <tr>
+            <th>Ngày</th>
+            <th>Chế độ</th>
+            <th>Điểm</th>
+            <th>Kết quả</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        {{range .Stats.RecentAttempts}}
+        <tr>
+            <td>{{.StartedAt.Format "02/01/2006 15:04"}}</td>
+            <td>{{if eq .Mode "flashcard"}}Flashcard{{else}}Thi thử{{end}}</td>
+            <td>{{percent .Score}}</td>
+            <td>{{.CorrectCount}} / {{.TotalQuestions}}</td>
+            <td><a href="/exam/{{.ID}}/result">Xem lại</a></td>
+        </tr>
+        {{end}}
+    </tbody>
+</table>
+{{end}}
+
+<a href="/stats" role="button" class="outline">← Quay lại</a>
+{{end}}

@@ -1,0 +1,36 @@
+{{define "content"}}
+<hgroup>
+    <h2>{{.Subject.Name}} — Kết quả</h2>
+    <p>Chế độ: {{if eq .Attempt.Mode "flashcard"}}Flashcard{{else}}Thi thử{{end}}</p>
+</hgroup>
+
+<article>
+    <h3>Điểm: {{.Attempt.CorrectCount}} / {{.Attempt.TotalQuestions}} ({{percent .Attempt.Score}})</h3>
+
+    <progress value="{{.Attempt.CorrectCount}}" max="{{.Attempt.TotalQuestions}}"></progress>
+</article>
+
+<h3>Chi tiết</h3>
+
+{{range $i, $d := .Details}}
+<article class="{{if $d.IsCorrect}}result-correct{{else}}result-wrong{{end}}">
+    <p><strong>{{add $i 1}}. {{$d.QuestionContent}}</strong></p>
+    {{if $d.SelectedLabels}}
+    <p>Bạn chọn: {{range $j, $l := $d.SelectedLabels}}{{if $j}}, {{end}}{{$l}}{{end}}</p>
+    {{else}}
+    <p><em>Chưa trả lời</em></p>
+    {{end}}
+    {{if not $d.IsCorrect}}
+    <p>Đáp án đúng: <strong>{{range $j, $l := $d.CorrectLabels}}{{if $j}}, {{end}}{{$l}}{{end}}</strong></p>
+    {{end}}
+    {{if $d.Explanation}}
+    <p class="explanation"><em>{{$d.Explanation}}</em></p>
+    {{end}}
+</article>
+{{end}}
+
+<div class="grid">
+    <a href="/" role="button">Trang chủ</a>
+    <a href="/stats/{{.Subject.ID}}" role="button" class="outline">Xem thống kê</a>
+</div>
+{{end}}

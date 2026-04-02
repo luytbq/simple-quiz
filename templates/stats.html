@@ -1,0 +1,30 @@
+{{define "content"}}
+<h2>Thống kê</h2>
+
+{{if .Subjects}}
+<table>
+    <thead>
+        <tr>
+            <th>Chủ đề</th>
+            <th>Số câu</th>
+            <th>Lượt thi</th>
+            <th>Điểm TB</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        {{range .Subjects}}
+        <tr>
+            <td>{{.Name}}</td>
+            <td>{{.QuestionCount}}</td>
+            <td>{{.TotalAttempts}}</td>
+            <td>{{percent .AvgScore}}</td>
+            <td><a href="/stats/{{.ID}}">Chi tiết</a></td>
+        </tr>
+        {{end}}
+    </tbody>
+</table>
+{{else}}
+<p>Chưa có chủ đề nào.</p>
+{{end}}
+{{end}}

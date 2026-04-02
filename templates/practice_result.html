@@ -1,0 +1,31 @@
+{{define "content"}}
+<hgroup>
+    <h2>{{.Subject.Name}} — Flashcard</h2>
+    <p>Câu {{.Progress}} / {{.Total}}</p>
+</hgroup>
+
+<article>
+    <p><strong>{{.Question.Content}}</strong></p>
+
+    {{if .IsCorrect}}
+    <p class="correct-answer">✓ Chính xác!</p>
+    {{else}}
+    <p class="wrong-answer">✗ Sai!</p>
+    <p>Bạn chọn: <strong>{{range $i, $l := .SelectedLabels}}{{if $i}}, {{end}}{{$l}}{{end}}</strong></p>
+    <p>Đáp án đúng: <strong>{{range $i, $l := .CorrectLabels}}{{if $i}}, {{end}}{{$l}}{{end}}</strong></p>
+    {{end}}
+
+    {{if .Question.Explanation}}
+    <details>
+        <summary>Giải thích</summary>
+        <p>{{.Question.Explanation}}</p>
+    </details>
+    {{end}}
+
+    {{if eq .Progress .Total}}
+    <a href="/exam/{{.AttemptID}}/result" role="button">Xem kết quả</a>
+    {{else}}
+    <a href="/practice/{{.SubjectID}}/question?attempt={{.AttemptID}}" role="button">Câu tiếp →</a>
+    {{end}}
+</article>
+{{end}}

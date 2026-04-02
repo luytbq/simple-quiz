@@ -1,0 +1,99 @@
+.correct-answer {
+    color: var(--pico-color-green-500, #2ecc40);
+    font-size: 1.2em;
+    font-weight: bold;
+}
+
+.wrong-answer {
+    color: var(--pico-color-red-500, #e74c3c);
+    font-size: 1.2em;
+    font-weight: bold;
+}
+
+.result-correct {
+    border-left: 4px solid #2ecc40;
+}
+
+.result-wrong {
+    border-left: 4px solid #e74c3c;
+}
+
+article label {
+    cursor: pointer;
+}
+
+article label:hover {
+    background: var(--pico-secondary-hover-background, #f0f0f0);
+    border-radius: 4px;
+    padding: 2px 4px;
+    margin: -2px -4px;
+}
+
+.explanation {
+    color: var(--pico-muted-color, #666);
+    margin-top: 0.5rem;
+}
+
+textarea {
+    font-family: monospace;
+}
+
+/* Prompt copy block */
+.prompt-block {
+    border: 1px solid var(--pico-muted-border-color, #e0e0e0);
+    border-radius: 8px;
+    overflow: hidden;
+    margin: 1rem 0;
+}
+
+.prompt-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0.5rem 0.5rem 1rem;
+    background: var(--pico-card-background-color, #f8f9fa);
+    border-bottom: 1px solid var(--pico-muted-border-color, #e0e0e0);
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--pico-muted-color, #666);
+}
+
+.copy-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 24px;
+    border: none;
+    border-radius: 8px;
+    background: var(--pico-primary, #1095c1);
+    color: #fff;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    line-height: 1;
+    width: auto;
+    margin: 0;
+}
+
+.copy-btn:hover {
+    background: var(--pico-primary-hover, #0d7ea3);
+    color: #fff;
+}
+
+.copy-btn.copied {
+    background: #2ecc40;
+    color: #fff;
+}
+
+.prompt-content {
+    margin: 0;
+    padding: 1rem;
+    border: none;
+    border-radius: 0;
+    font-size: 0.875rem;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    background: #1e1e2e;
+    color: #cdd6f4;
+}

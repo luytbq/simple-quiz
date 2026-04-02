@@ -1,0 +1,32 @@
+{{define "content"}}
+<hgroup>
+    <h2>{{.Subject.Name}} — Thi thử</h2>
+    <p>{{len .Questions}} câu hỏi</p>
+</hgroup>
+
+<form method="POST" action="/exam/{{.Attempt.ID}}/submit">
+    {{range $i, $q := .Questions}}
+    <article>
+        <p><strong>{{add $i 1}}. {{$q.Content}}</strong></p>
+        {{if $q.MultiAnswer}}
+        <p><small><em>(Chọn nhiều đáp án)</em></small></p>
+        {{range $q.Answers}}
+        <label>
+            <input type="checkbox" name="q_{{$q.ID}}" value="{{.ID}}">
+            {{.Label}}. {{.Content}}
+        </label>
+        {{end}}
+        {{else}}
+        {{range $q.Answers}}
+        <label>
+            <input type="radio" name="q_{{$q.ID}}" value="{{.ID}}">
+            {{.Label}}. {{.Content}}
+        </label>
+        {{end}}
+        {{end}}
+    </article>
+    {{end}}
+
+    <button type="submit" class="contrast">Nộp bài</button>
+</form>
+{{end}}
