@@ -2,7 +2,7 @@
 <h2>{{.Subject.Name}} — Thiết lập bài thi</h2>
 
 <article>
-    <form method="POST" action="/exam/{{.Subject.ID}}/start">
+    <form method="POST" action="{{bp}}/exam/{{.Subject.ID}}/start">
         <label for="question_count">
             Số câu hỏi (tối đa {{.Subject.QuestionCount}})
         </label>

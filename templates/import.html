@@ -1,38 +1,114 @@
 {{define "content"}}
-<h2>Import câu hỏi</h2>
+<h2>Quản lý đề thi</h2>
 
 {{if .Error}}
-<article style="background: var(--pico-del-color); padding: 1rem;">
-    {{.Error}}
-</article>
+<article class="msg-error">{{.Error}}</article>
 {{end}}
 
 {{if .Success}}
-<article style="background: var(--pico-ins-color); padding: 1rem;">
-    {{.Success}}
-</article>
+<article class="msg-success">{{.Success}}</article>
 {{end}}
 
 <article>
-    <form method="POST" action="/import">
+    <h3>Import đề thi</h3>
+    <form method="POST" action="{{bp}}/manage">
         <label for="json_data">Paste dữ liệu JSON</label>
-        <textarea id="json_data" name="json_data" rows="15" placeholder='{
+        <textarea id="json_data" name="json_data" rows="12" placeholder='{
   "subject": "Tên chủ đề",
   "questions": [
     {
       "content": "Nội dung câu hỏi?",
-      "explanation": "Giải thích (tùy chọn)",
       "answers": [
         {"label": "A", "content": "Đáp án 1", "is_correct": false},
-        {"label": "B", "content": "Đáp án 2", "is_correct": true},
-        {"label": "C", "content": "Đáp án 3", "is_correct": false},
-        {"label": "D", "content": "Đáp án 4", "is_correct": false}
+        {"label": "B", "content": "Đáp án 2", "is_correct": true}
       ]
     }
   ]
 }' required></textarea>
-
         <button type="submit">Import</button>
     </form>
 </article>
+
+<h3>Danh sách đề thi</h3>
+
+{{if .Subjects}}
+<table>
+    <thead>
+        <tr>
+            <th>Chủ đề</th>
+            <th>Số câu</th>
+            <th>Ngày tạo</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        {{range .Subjects}}
+        <tr>
+            <td>{{.Name}}</td>
+            <td>{{.QuestionCount}}</td>
+            <td>{{.CreatedAt.Format "02/01/2006"}}</td>
+            <td class="actions">
+                <button class="btn-share" onclick="toggleShare('share-{{.ID}}')">Share</button>
+                <a href="{{bp}}/manage/{{.ID}}/export"
+                   class="btn-export"
+                   onclick="return confirm('Export đề thi \'{{.Name}}\' ra file JSON?')">
+                    Export
+                </a>
+                <form method="POST" action="{{bp}}/manage/{{.ID}}/delete" style="display:inline"
+                      onsubmit="return confirm('Xoá đề thi \'{{.Name}}\' và toàn bộ {{.QuestionCount}} câu hỏi?\nThao tác này không thể hoàn tác!')">
+                    <button type="submit" class="btn-delete">Xoá</button>
+                </form>
+            </td>
+        </tr>
+        <tr class="share-row" id="share-{{.ID}}" style="display:none">
+            <td colspan="4">
+                <div class="share-links">
+                    <div class="share-link-group">
+                        <label>Link chọn chế độ:</label>
+                        <div class="share-link-copy">
+                            <input type="text" readonly value="{{bp}}/s/{{.ShareCode}}" class="share-input" id="link-mode-{{.ID}}">
+                            <button class="btn-copy" onclick="copyLink('link-mode-{{.ID}}', this)">Copy</button>
+                        </div>
+                    </div>
+                    <div class="share-link-group">
+                        <label>Link thi trực tiếp ({{.QuestionCount}} câu):</label>
+                        <div class="share-link-copy">
+                            <input type="text" readonly value="{{bp}}/s/{{.ShareCode}}/start?count={{.QuestionCount}}" class="share-input" id="link-exam-{{.ID}}">
+                            <button class="btn-copy" onclick="copyLink('link-exam-{{.ID}}', this)">Copy</button>
+                        </div>
+                    </div>
+                </div>
+            </td>
+        </tr>
+        {{end}}
+    </tbody>
+</table>
+{{else}}
+<p>Chưa có đề thi nào.</p>
+{{end}}
+
+<script>
+// Prepend origin to share links
+document.querySelectorAll('.share-input').forEach(el => {
+    el.value = location.origin + el.value;
+});
+
+function toggleShare(id) {
+    const row = document.getElementById(id);
+    row.style.display = row.style.display === 'none' ? '' : 'none';
+}
+
+function copyLink(inputId, btn) {
+    const input = document.getElementById(inputId);
+    navigator.clipboard.writeText(input.value).then(() => {
+        const orig = btn.textContent;
+        btn.textContent = 'Copied!';
+        btn.classList.add('copied');
+        setTimeout(() => {
+            btn.textContent = orig;
+            btn.classList.remove('copied');
+        }, 2000);
+    });
+}
+</script>
 {{end}}

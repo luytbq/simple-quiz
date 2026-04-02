@@ -35,12 +35,12 @@
             <td>{{if eq .Mode "flashcard"}}Flashcard{{else}}Thi thử{{end}}</td>
             <td>{{percent .Score}}</td>
             <td>{{.CorrectCount}} / {{.TotalQuestions}}</td>
-            <td><a href="/exam/{{.ID}}/result">Xem lại</a></td>
+            <td><a href="{{bp}}/exam/{{.ID}}/result">Xem lại</a></td>
         </tr>
         {{end}}
     </tbody>
 </table>
 {{end}}
 
-<a href="/stats" role="button" class="outline">← Quay lại</a>
+<a href="{{bp}}/stats" role="button" class="outline">← Quay lại</a>
 {{end}}

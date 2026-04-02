@@ -1,0 +1,19 @@
+{{define "content"}}
+<article style="text-align: center; padding: 2rem;">
+    <h2>{{.Subject.Name}}</h2>
+    <p>{{.Subject.QuestionCount}} câu hỏi</p>
+
+    <div class="grid" style="max-width: 400px; margin: 2rem auto;">
+        <a href="{{bp}}/practice/{{.Subject.ID}}" role="button">Flashcard</a>
+    </div>
+
+    <form method="GET" action="{{bp}}/s/{{.ShareCode}}/start" style="max-width: 400px; margin: 0 auto;">
+        <label for="count">Số câu hỏi cho bài thi</label>
+        <div class="grid">
+            <input type="number" id="count" name="count"
+                   min="1" max="{{.Subject.QuestionCount}}" value="{{.Subject.QuestionCount}}">
+            <button type="submit" class="outline">Thi thử</button>
+        </div>
+    </form>
+</article>
+{{end}}

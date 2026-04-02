@@ -4,7 +4,7 @@
     <p>{{len .Questions}} câu hỏi</p>
 </hgroup>
 
-<form method="POST" action="/exam/{{.Attempt.ID}}/submit">
+<form method="POST" action="{{bp}}/exam/{{.Attempt.ID}}/submit">
     {{range $i, $q := .Questions}}
     <article>
         <p><strong>{{add $i 1}}. {{$q.Content}}</strong></p>

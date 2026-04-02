@@ -16,13 +16,13 @@
             <small> — {{.QuestionCount}} câu hỏi</small>
         </header>
         <div class="grid">
-            <a href="/practice/{{.ID}}" role="button">Flashcard</a>
-            <a href="/exam/{{.ID}}" role="button" class="outline">Thi thử</a>
+            <a href="{{bp}}/practice/{{.ID}}" role="button">Flashcard</a>
+            <a href="{{bp}}/exam/{{.ID}}" role="button" class="outline">Thi thử</a>
         </div>
     </article>
     {{end}}
 </div>
 {{else}}
-<p>Chưa có chủ đề nào. <a href="/import">Import câu hỏi</a> để bắt đầu.</p>
+<p>Chưa có chủ đề nào. <a href="{{bp}}/manage">Import câu hỏi</a> để bắt đầu.</p>
 {{end}}
 {{end}}

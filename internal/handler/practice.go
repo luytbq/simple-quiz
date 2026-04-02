@@ -26,7 +26,7 @@ func (h *Handler) PracticeStart(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http.Redirect(w, r, fmt.Sprintf("/practice/%d/question?attempt=%d", subjectID, attempt.ID), http.StatusSeeOther)
+	http.Redirect(w, r, h.url(fmt.Sprintf("/practice/%d/question?attempt=%d", subjectID, attempt.ID)), http.StatusSeeOther)
 }
 
 func (h *Handler) PracticeQuestion(w http.ResponseWriter, r *http.Request) {
@@ -59,7 +59,7 @@ func (h *Handler) PracticeQuestion(w http.ResponseWriter, r *http.Request) {
 	if err == sql.ErrNoRows {
 		// All questions answered, finish attempt and show result
 		h.Attempts.FinishAttempt(attemptID)
-		http.Redirect(w, r, fmt.Sprintf("/exam/%d/result", attemptID), http.StatusSeeOther)
+		http.Redirect(w, r, h.url(fmt.Sprintf("/exam/%d/result", attemptID)), http.StatusSeeOther)
 		return
 	}
 	if err != nil {

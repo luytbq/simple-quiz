@@ -23,9 +23,9 @@
     {{end}}
 
     {{if eq .Progress .Total}}
-    <a href="/exam/{{.AttemptID}}/result" role="button">Xem kết quả</a>
+    <a href="{{bp}}/exam/{{.AttemptID}}/result" role="button">Xem kết quả</a>
     {{else}}
-    <a href="/practice/{{.SubjectID}}/question?attempt={{.AttemptID}}" role="button">Câu tiếp →</a>
+    <a href="{{bp}}/practice/{{.SubjectID}}/question?attempt={{.AttemptID}}" role="button">Câu tiếp →</a>
     {{end}}
 </article>
 {{end}}

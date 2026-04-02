@@ -3,10 +3,11 @@ package db
 import "time"
 
 type Subject struct {
-	ID          int64
-	Name        string
-	Description string
-	CreatedAt   time.Time
+	ID            int64
+	Name          string
+	Description   string
+	ShareCode     string
+	CreatedAt     time.Time
 	QuestionCount int // populated by queries, not stored
 }
 

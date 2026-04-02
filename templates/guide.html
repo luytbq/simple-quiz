@@ -5,7 +5,7 @@
     <h3>1. Import câu hỏi</h3>
     <p>Có 2 cách để thêm câu hỏi vào hệ thống:</p>
     <ul>
-        <li><strong>Giao diện web:</strong> Vào <a href="/import">Import</a>, paste JSON vào textarea và nhấn Import.</li>
+        <li><strong>Giao diện web:</strong> Vào <a href="{{bp}}/manage">Import</a>, paste JSON vào textarea và nhấn Import.</li>
         <li><strong>Dòng lệnh:</strong> <code>./quiz import file.json</code></li>
     </ul>
     <p>Nếu chủ đề đã tồn tại, câu hỏi mới sẽ được thêm vào chủ đề đó.</p>
@@ -68,7 +68,7 @@ Chỉ trả về JSON hợp lệ, không giải thích:
   ]
 }</pre>
     </div>
-    <p>Sau khi nhận JSON, paste vào <a href="/import">trang Import</a> hoặc lưu file rồi chạy <code>./quiz import file.json</code>.</p>
+    <p>Sau khi nhận JSON, paste vào <a href="{{bp}}/manage">trang Import</a> hoặc lưu file rồi chạy <code>./quiz import file.json</code>.</p>
 
     <script>
     function copyPrompt(btn) {
@@ -91,6 +91,6 @@ Chỉ trả về JSON hợp lệ, không giải thích:
 
 <article>
     <h3>5. Thống kê</h3>
-    <p>Vào <a href="/stats">Thống kê</a> để xem tỷ lệ chính xác, điểm trung bình, điểm cao nhất và lịch sử làm bài theo từng chủ đề.</p>
+    <p>Vào <a href="{{bp}}/stats">Thống kê</a> để xem tỷ lệ chính xác, điểm trung bình, điểm cao nhất và lịch sử làm bài theo từng chủ đề.</p>
 </article>
 {{end}}

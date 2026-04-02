@@ -35,6 +35,7 @@ func Migrate(db *sql.DB) error {
 	for _, col := range []string{
 		"ALTER TABLE questions ADD COLUMN explanation TEXT DEFAULT ''",
 		"ALTER TABLE questions ADD COLUMN multi_answer BOOLEAN NOT NULL DEFAULT 0",
+		"ALTER TABLE subjects ADD COLUMN share_code TEXT DEFAULT ''",
 	} {
 		db.Exec(col) // ignore "duplicate column" errors
 	}
@@ -46,6 +47,7 @@ CREATE TABLE IF NOT EXISTS subjects (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL UNIQUE,
     description TEXT DEFAULT '',
+    share_code TEXT DEFAULT '',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 

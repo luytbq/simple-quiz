@@ -38,6 +38,137 @@ textarea {
     font-family: monospace;
 }
 
+/* Flash messages */
+.msg-error {
+    background: #fdecea !important;
+    border-left: 4px solid #e74c3c;
+    color: #a94442;
+    padding: 0.75rem 1rem !important;
+}
+
+.msg-success {
+    background: #eaf7ec !important;
+    border-left: 4px solid #2ecc40;
+    color: #2d6a30;
+    padding: 0.75rem 1rem !important;
+}
+
+/* Manage table actions */
+td.actions {
+    white-space: nowrap;
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.btn-export {
+    display: inline-block;
+    padding: 4px 12px;
+    font-size: 0.8rem;
+    border: 1px solid var(--pico-primary, #1095c1);
+    border-radius: 6px;
+    color: var(--pico-primary, #1095c1);
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.btn-export:hover {
+    background: var(--pico-primary, #1095c1);
+    color: #fff;
+}
+
+.btn-delete {
+    display: inline-block;
+    padding: 4px 12px;
+    font-size: 0.8rem;
+    border: 1px solid #e74c3c;
+    border-radius: 6px;
+    background: transparent;
+    color: #e74c3c;
+    cursor: pointer;
+    transition: all 0.15s;
+    width: auto;
+    margin: 0;
+}
+
+.btn-delete:hover {
+    background: #e74c3c;
+    color: #fff;
+}
+
+/* Share */
+.btn-share {
+    display: inline-block;
+    padding: 4px 12px;
+    font-size: 0.8rem;
+    border: 1px solid #2ecc40;
+    border-radius: 6px;
+    background: transparent;
+    color: #2ecc40;
+    cursor: pointer;
+    transition: all 0.15s;
+    width: auto;
+    margin: 0;
+}
+
+.btn-share:hover {
+    background: #2ecc40;
+    color: #fff;
+}
+
+.share-row td {
+    padding: 0.5rem 1rem 1rem;
+    background: var(--pico-card-background-color, #f8f9fa);
+}
+
+.share-links {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.share-link-group label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+}
+
+.share-link-copy {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.share-input {
+    font-size: 0.85rem;
+    padding: 4px 8px;
+    margin: 0;
+}
+
+.btn-copy {
+    padding: 4px 16px;
+    font-size: 0.8rem;
+    border: 1px solid var(--pico-primary, #1095c1);
+    border-radius: 6px;
+    background: var(--pico-primary, #1095c1);
+    color: #fff;
+    cursor: pointer;
+    transition: all 0.15s;
+    width: auto;
+    margin: 0;
+    white-space: nowrap;
+}
+
+.btn-copy:hover {
+    background: var(--pico-primary-hover, #0d7ea3);
+}
+
+.btn-copy.copied {
+    background: #2ecc40;
+    border-color: #2ecc40;
+}
+
 /* Prompt copy block */
 .prompt-block {
     border: 1px solid var(--pico-muted-border-color, #e0e0e0);

@@ -15,7 +15,7 @@ type QuestionService struct {
 
 func (s *QuestionService) ListSubjects() ([]db.Subject, error) {
 	rows, err := s.DB.Query(`
-		SELECT s.id, s.name, s.description, s.created_at, COUNT(q.id)
+		SELECT s.id, s.name, s.description, s.share_code, s.created_at, COUNT(q.id)
 		FROM subjects s
 		LEFT JOIN questions q ON q.subject_id = s.id
 		GROUP BY s.id
@@ -29,7 +29,7 @@ func (s *QuestionService) ListSubjects() ([]db.Subject, error) {
 	var subjects []db.Subject
 	for rows.Next() {
 		var sub db.Subject
-		if err := rows.Scan(&sub.ID, &sub.Name, &sub.Description, &sub.CreatedAt, &sub.QuestionCount); err != nil {
+		if err := rows.Scan(&sub.ID, &sub.Name, &sub.Description, &sub.ShareCode, &sub.CreatedAt, &sub.QuestionCount); err != nil {
 			return nil, err
 		}
 		subjects = append(subjects, sub)
@@ -40,16 +40,54 @@ func (s *QuestionService) ListSubjects() ([]db.Subject, error) {
 func (s *QuestionService) GetSubject(id int64) (*db.Subject, error) {
 	var sub db.Subject
 	err := s.DB.QueryRow(`
-		SELECT s.id, s.name, s.description, s.created_at, COUNT(q.id)
+		SELECT s.id, s.name, s.description, s.share_code, s.created_at, COUNT(q.id)
 		FROM subjects s
 		LEFT JOIN questions q ON q.subject_id = s.id
 		WHERE s.id = ?
 		GROUP BY s.id
-	`, id).Scan(&sub.ID, &sub.Name, &sub.Description, &sub.CreatedAt, &sub.QuestionCount)
+	`, id).Scan(&sub.ID, &sub.Name, &sub.Description, &sub.ShareCode, &sub.CreatedAt, &sub.QuestionCount)
 	if err != nil {
 		return nil, err
 	}
 	return &sub, nil
+}
+
+func (s *QuestionService) GetSubjectByShareCode(code string) (*db.Subject, error) {
+	var sub db.Subject
+	err := s.DB.QueryRow(`
+		SELECT s.id, s.name, s.description, s.share_code, s.created_at, COUNT(q.id)
+		FROM subjects s
+		LEFT JOIN questions q ON q.subject_id = s.id
+		WHERE s.share_code = ?
+		GROUP BY s.id
+	`, code).Scan(&sub.ID, &sub.Name, &sub.Description, &sub.ShareCode, &sub.CreatedAt, &sub.QuestionCount)
+	if err != nil {
+		return nil, err
+	}
+	return &sub, nil
+}
+
+func (s *QuestionService) EnsureShareCode(subjectID int64) (string, error) {
+	var code string
+	err := s.DB.QueryRow("SELECT share_code FROM subjects WHERE id = ?", subjectID).Scan(&code)
+	if err != nil {
+		return "", err
+	}
+	if code != "" {
+		return code, nil
+	}
+	code = generateShareCode()
+	_, err = s.DB.Exec("UPDATE subjects SET share_code = ? WHERE id = ?", code, subjectID)
+	return code, err
+}
+
+func generateShareCode() string {
+	const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+	b := make([]byte, 8)
+	for i := range b {
+		b[i] = chars[rand.IntN(len(chars))]
+	}
+	return string(b)
 }
 
 func (s *QuestionService) CountQuestions(subjectID int64) (int, error) {
@@ -185,7 +223,7 @@ func (s *QuestionService) ImportQuestions(data db.ImportData) (*db.Subject, int,
 	var subjectID int64
 	err = tx.QueryRow("SELECT id FROM subjects WHERE name = ?", data.Subject).Scan(&subjectID)
 	if err == sql.ErrNoRows {
-		res, err := tx.Exec("INSERT INTO subjects (name) VALUES (?)", data.Subject)
+		res, err := tx.Exec("INSERT INTO subjects (name, share_code) VALUES (?, ?)", data.Subject, generateShareCode())
 		if err != nil {
 			return nil, 0, fmt.Errorf("insert subject: %w", err)
 		}
@@ -240,8 +278,66 @@ func (s *QuestionService) ImportQuestions(data db.ImportData) (*db.Subject, int,
 }
 
 func (s *QuestionService) DeleteSubject(id int64) error {
+	// Delete related attempt data first
+	s.DB.Exec(`DELETE FROM attempt_answers WHERE attempt_id IN (SELECT id FROM exam_attempts WHERE subject_id = ?)`, id)
+	s.DB.Exec(`DELETE FROM exam_attempts WHERE subject_id = ?`, id)
 	_, err := s.DB.Exec("DELETE FROM subjects WHERE id = ?", id)
 	return err
+}
+
+func (s *QuestionService) ExportSubject(subjectID int64) (*db.ImportData, error) {
+	sub, err := s.GetSubject(subjectID)
+	if err != nil {
+		return nil, err
+	}
+
+	rows, err := s.DB.Query(
+		"SELECT id, content, explanation, multi_answer FROM questions WHERE subject_id = ? ORDER BY order_number",
+		subjectID,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var questions []db.ImportQuestion
+	for rows.Next() {
+		var qID int64
+		var content, explanation string
+		var multiAnswer bool
+		if err := rows.Scan(&qID, &content, &explanation, &multiAnswer); err != nil {
+			return nil, err
+		}
+
+		answers, err := s.getAnswers(qID)
+		if err != nil {
+			return nil, err
+		}
+
+		var importAnswers []db.ImportAnswer
+		for _, a := range answers {
+			importAnswers = append(importAnswers, db.ImportAnswer{
+				Label:     a.Label,
+				Content:   a.Content,
+				IsCorrect: a.IsCorrect,
+			})
+		}
+
+		iq := db.ImportQuestion{
+			Content: content,
+			Answers: importAnswers,
+		}
+		if explanation != "" {
+			iq.Explanation = explanation
+		}
+
+		questions = append(questions, iq)
+	}
+
+	return &db.ImportData{
+		Subject:   sub.Name,
+		Questions: questions,
+	}, nil
 }
 
 func (s *QuestionService) getAnswers(questionID int64) ([]db.Answer, error) {

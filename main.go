@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"strings"
 
 	"quiz/cmd"
 	"quiz/internal/db"
@@ -49,11 +50,13 @@ func main() {
 		os.Exit(1)
 	}
 
+	basePath := strings.TrimRight(os.Getenv("BASE_PATH"), "/")
+
 	qs := &service.QuestionService{DB: database}
 	as := &service.AttemptService{DB: database}
 
 	templateFS, _ := fs.Sub(content, ".")
-	h := handler.New(qs, as, templateFS)
+	h := handler.New(qs, as, templateFS, basePath)
 
 	staticFS, _ := fs.Sub(content, "static")
 
@@ -61,13 +64,19 @@ func main() {
 	h.RegisterRoutes(mux)
 	mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServer(http.FS(staticFS))))
 
+	// Wrap with base path prefix stripping
+	var root http.Handler = mux
+	if basePath != "" {
+		root = http.StripPrefix(basePath, mux)
+	}
+
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
 	}
 
-	slog.Info("starting server", "port", port)
-	if err := http.ListenAndServe(":"+port, mux); err != nil {
+	slog.Info("starting server", "port", port, "basePath", basePath)
+	if err := http.ListenAndServe(":"+port, root); err != nil {
 		slog.Error("server error", "error", err)
 		os.Exit(1)
 	}

@@ -14,10 +14,11 @@ import (
 type Handler struct {
 	Questions *service.QuestionService
 	Attempts  *service.AttemptService
+	BasePath  string
 	templates map[string]*template.Template
 }
 
-func New(qs *service.QuestionService, as *service.AttemptService, templateFS fs.FS) *Handler {
+func New(qs *service.QuestionService, as *service.AttemptService, templateFS fs.FS, basePath string) *Handler {
 	funcMap := template.FuncMap{
 		"add": func(a, b int) int { return a + b },
 		"percent": func(score float64) string {
@@ -30,12 +31,13 @@ func New(qs *service.QuestionService, as *service.AttemptService, templateFS fs.
 			}
 			return s
 		},
+		"bp": func() string { return basePath },
 	}
 
 	pages := []string{
 		"home.html", "practice.html", "practice_result.html",
 		"exam_setup.html", "exam.html", "exam_result.html",
-		"import.html", "stats.html", "stats_detail.html", "guide.html",
+		"import.html", "stats.html", "stats_detail.html", "guide.html", "share.html",
 	}
 
 	templates := make(map[string]*template.Template)
@@ -49,6 +51,7 @@ func New(qs *service.QuestionService, as *service.AttemptService, templateFS fs.
 	return &Handler{
 		Questions: qs,
 		Attempts:  as,
+		BasePath:  basePath,
 		templates: templates,
 	}
 }
@@ -70,9 +73,11 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	// Home
 	mux.HandleFunc("GET /{$}", h.Home)
 
-	// Import
-	mux.HandleFunc("GET /import", h.ImportForm)
-	mux.HandleFunc("POST /import", h.ImportSubmit)
+	// Manage
+	mux.HandleFunc("GET /manage", h.ImportForm)
+	mux.HandleFunc("POST /manage", h.ImportSubmit)
+	mux.HandleFunc("POST /manage/{subjectID}/delete", h.DeleteSubject)
+	mux.HandleFunc("GET /manage/{subjectID}/export", h.ExportSubject)
 
 	// Practice (flashcard)
 	mux.HandleFunc("GET /practice/{subjectID}", h.PracticeStart)
@@ -90,8 +95,16 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /stats", h.Stats)
 	mux.HandleFunc("GET /stats/{subjectID}", h.SubjectStats)
 
+	// Share
+	mux.HandleFunc("GET /s/{shareCode}", h.SharePage)
+	mux.HandleFunc("GET /s/{shareCode}/start", h.ShareStart)
+
 	// Guide
 	mux.HandleFunc("GET /guide", h.Guide)
+}
+
+func (h *Handler) url(path string) string {
+	return h.BasePath + path
 }
 
 func pathInt64(r *http.Request, name string) (int64, error) {
