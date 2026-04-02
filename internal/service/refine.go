@@ -32,7 +32,7 @@ func RefineImportData(raw string) *RefineResult {
 		result.HelpHTML = fmt.Sprintf(
 			`<p><strong>Dữ liệu không phải JSON hợp lệ.</strong></p>
 			<p>Lỗi: <code>%s</code></p>
-			<p>Hãy kiểm tra lại hoặc copy lại từ output của AI. Đảm bảo copy đầy đủ từ <code>{</code> đến <code>}</code>.</p>`,
+			<p>Hãy kiểm tra lại nội dung. Đảm bảo dữ liệu là JSON hợp lệ, bắt đầu bằng <code>{</code> và kết thúc bằng <code>}</code>.</p>`,
 			escapeHTML(err.Error()),
 		)
 		return result

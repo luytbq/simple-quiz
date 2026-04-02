@@ -18,9 +18,13 @@
 </article>
 {{end}}
 
-<div class="grid">
-    <a href="{{bp}}/manage" role="button" class="outline">← Quay lại sửa</a>
-</div>
+<article>
+    <p>Sửa dữ liệu bên dưới rồi thử lại. Xem <a href="{{bp}}/guide">hướng dẫn</a> để biết format JSON đúng.</p>
+    <form method="POST" action="{{bp}}/manage/check">
+        <textarea id="json_data" name="json_data" rows="15" style="font-family:monospace">{{.RawText}}</textarea>
+        <button type="submit">Kiểm tra lại</button>
+    </form>
+</article>
 
 {{else}}
 <h2>Preview Import: "{{.Data.Subject}}"</h2>

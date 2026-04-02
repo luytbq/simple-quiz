@@ -7,7 +7,7 @@
             Số câu hỏi (tối đa {{.Subject.QuestionCount}})
         </label>
         <input type="number" id="question_count" name="question_count"
-               min="1" max="{{.Subject.QuestionCount}}" value="{{.Subject.QuestionCount}}" required>
+               min="1" max="{{.Subject.QuestionCount}}" value="{{minInt .Subject.QuestionCount 25}}" required>
 
         <button type="submit">Bắt đầu thi</button>
     </form>

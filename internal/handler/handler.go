@@ -48,7 +48,8 @@ type Handler struct {
 
 func New(qs *service.QuestionService, as *service.AttemptService, templateFS fs.FS, basePath string) *Handler {
 	funcMap := template.FuncMap{
-		"add": func(a, b int) int { return a + b },
+		"add":    func(a, b int) int { return a + b },
+		"minInt": func(a, b int) int { if a < b { return a }; return b },
 		"percent": func(score float64) string {
 			return fmt.Sprintf("%.1f%%", score)
 		},
