@@ -78,6 +78,10 @@ article img {
     border-left: 4px solid #e74c3c;
 }
 
+.file-input {
+    margin-bottom: 0.5rem;
+}
+
 .search-box {
     margin-bottom: 1rem;
 }

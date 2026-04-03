@@ -12,7 +12,8 @@
 <article>
     <h3>Import đề thi</h3>
     <form method="POST" action="{{bp}}/manage/check">
-        <label for="json_data">Paste dữ liệu JSON</label>
+        <label for="json_data">Paste dữ liệu JSON hoặc chọn file</label>
+        <input type="file" id="json_file" accept=".json" class="file-input">
         <textarea id="json_data" name="json_data" rows="12" placeholder='{
   "subject": "Tên chủ đề",
   "questions": [
@@ -27,6 +28,17 @@
 }' required></textarea>
         <button type="submit">Kiểm tra</button>
     </form>
+    <script>
+    document.getElementById('json_file').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(ev) {
+            document.getElementById('json_data').value = ev.target.result;
+        };
+        reader.readAsText(file);
+    });
+    </script>
 </article>
 
 <h3>Danh sách đề thi</h3>
