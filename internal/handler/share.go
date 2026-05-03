@@ -2,6 +2,7 @@ package handler
 
 import (
 	"fmt"
+	"log/slog"
 	"net/http"
 	"strconv"
 )
@@ -11,6 +12,7 @@ func (h *Handler) SharePage(w http.ResponseWriter, r *http.Request) {
 
 	subject, err := h.Questions.GetSubjectByShareCode(code)
 	if err != nil {
+		slog.Warn("SharePage: subject not found", "shareCode", code, "error", err)
 		http.Error(w, "Không tìm thấy đề thi", http.StatusNotFound)
 		return
 	}
@@ -26,6 +28,7 @@ func (h *Handler) ShareStart(w http.ResponseWriter, r *http.Request) {
 
 	subject, err := h.Questions.GetSubjectByShareCode(code)
 	if err != nil {
+		slog.Warn("ShareStart: subject not found", "shareCode", code, "error", err)
 		http.Error(w, "Không tìm thấy đề thi", http.StatusNotFound)
 		return
 	}
@@ -40,7 +43,8 @@ func (h *Handler) ShareStart(w http.ResponseWriter, r *http.Request) {
 
 	attempt, err := h.Attempts.CreateAttempt(subject.ID, "exam", count)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		slog.Error("ShareStart: create attempt failed", "subjectID", subject.ID, "count", count, "error", err)
+		http.Error(w, "Lỗi hệ thống", http.StatusInternalServerError)
 		return
 	}
 

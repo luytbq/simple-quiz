@@ -3,6 +3,7 @@ package handler
 import (
 	"database/sql"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"strconv"
 )
@@ -10,19 +11,22 @@ import (
 func (h *Handler) PracticeStart(w http.ResponseWriter, r *http.Request) {
 	subjectID, err := pathInt64(r, "subjectID")
 	if err != nil {
-		http.Error(w, "Invalid subject ID", http.StatusBadRequest)
+		slog.Warn("PracticeStart: invalid subject ID", "raw", r.PathValue("subjectID"))
+		http.Error(w, "Subject ID không hợp lệ", http.StatusBadRequest)
 		return
 	}
 
 	count, err := h.Questions.CountQuestions(subjectID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		slog.Error("PracticeStart: count questions failed", "subjectID", subjectID, "error", err)
+		http.Error(w, "Lỗi hệ thống", http.StatusInternalServerError)
 		return
 	}
 
 	attempt, err := h.Attempts.CreateAttempt(subjectID, "flashcard", count)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		slog.Error("PracticeStart: create attempt failed", "subjectID", subjectID, "error", err)
+		http.Error(w, "Lỗi hệ thống", http.StatusInternalServerError)
 		return
 	}
 
@@ -32,38 +36,43 @@ func (h *Handler) PracticeStart(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) PracticeQuestion(w http.ResponseWriter, r *http.Request) {
 	subjectID, err := pathInt64(r, "subjectID")
 	if err != nil {
-		http.Error(w, "Invalid subject ID", http.StatusBadRequest)
+		slog.Warn("PracticeQuestion: invalid subject ID", "raw", r.PathValue("subjectID"))
+		http.Error(w, "Subject ID không hợp lệ", http.StatusBadRequest)
 		return
 	}
 
 	attemptID, err := strconv.ParseInt(r.URL.Query().Get("attempt"), 10, 64)
 	if err != nil {
-		http.Error(w, "Invalid attempt ID", http.StatusBadRequest)
+		slog.Warn("PracticeQuestion: invalid attempt ID", "subjectID", subjectID, "raw", r.URL.Query().Get("attempt"))
+		http.Error(w, "Attempt ID không hợp lệ", http.StatusBadRequest)
 		return
 	}
 
 	subject, err := h.Questions.GetSubject(subjectID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		slog.Error("PracticeQuestion: get subject failed", "subjectID", subjectID, "error", err)
+		http.Error(w, "Không tìm thấy chủ đề", http.StatusNotFound)
 		return
 	}
 
-	// Get already answered question IDs
 	answeredIDs, err := h.Attempts.GetAnsweredQuestionIDs(attemptID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		slog.Error("PracticeQuestion: get answered IDs failed", "attemptID", attemptID, "error", err)
+		http.Error(w, "Lỗi hệ thống", http.StatusInternalServerError)
 		return
 	}
 
 	question, err := h.Questions.GetRandomQuestion(subjectID, answeredIDs)
 	if err == sql.ErrNoRows {
-		// All questions answered, finish attempt and show result
-		h.Attempts.FinishAttempt(attemptID)
+		if _, err := h.Attempts.FinishAttempt(attemptID); err != nil {
+			slog.Error("PracticeQuestion: finish attempt failed", "attemptID", attemptID, "error", err)
+		}
 		http.Redirect(w, r, h.url(fmt.Sprintf("/exam/%d/result", attemptID)), http.StatusSeeOther)
 		return
 	}
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		slog.Error("PracticeQuestion: get random question failed", "subjectID", subjectID, "error", err)
+		http.Error(w, "Lỗi hệ thống", http.StatusInternalServerError)
 		return
 	}
 
@@ -79,22 +88,38 @@ func (h *Handler) PracticeQuestion(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) PracticeAnswer(w http.ResponseWriter, r *http.Request) {
 	subjectID, err := pathInt64(r, "subjectID")
 	if err != nil {
-		http.Error(w, "Invalid subject ID", http.StatusBadRequest)
+		slog.Warn("PracticeAnswer: invalid subject ID", "raw", r.PathValue("subjectID"))
+		http.Error(w, "Subject ID không hợp lệ", http.StatusBadRequest)
 		return
 	}
 
-	r.ParseForm()
-	attemptID, _ := strconv.ParseInt(r.FormValue("attempt_id"), 10, 64)
-	questionID, _ := strconv.ParseInt(r.FormValue("question_id"), 10, 64)
+	if err := r.ParseForm(); err != nil {
+		slog.Warn("PracticeAnswer: parse form failed", "subjectID", subjectID, "error", err)
+		http.Error(w, "Dữ liệu form không hợp lệ", http.StatusBadRequest)
+		return
+	}
 
-	// Get question to check if multi-answer
+	attemptID, err := strconv.ParseInt(r.FormValue("attempt_id"), 10, 64)
+	if err != nil {
+		slog.Warn("PracticeAnswer: invalid attempt ID", "subjectID", subjectID, "raw", r.FormValue("attempt_id"))
+		http.Error(w, "Attempt ID không hợp lệ", http.StatusBadRequest)
+		return
+	}
+
+	questionID, err := strconv.ParseInt(r.FormValue("question_id"), 10, 64)
+	if err != nil {
+		slog.Warn("PracticeAnswer: invalid question ID", "subjectID", subjectID, "raw", r.FormValue("question_id"))
+		http.Error(w, "Question ID không hợp lệ", http.StatusBadRequest)
+		return
+	}
+
 	question, err := h.Questions.GetQuestionWithAnswers(questionID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		slog.Error("PracticeAnswer: get question failed", "questionID", questionID, "error", err)
+		http.Error(w, "Không tìm thấy câu hỏi", http.StatusNotFound)
 		return
 	}
 
-	// Collect selected answer IDs (single or multiple)
 	var selectedAnswerIDs []int64
 	if question.MultiAnswer {
 		for _, v := range r.Form["answer_id"] {
@@ -108,14 +133,12 @@ func (h *Handler) PracticeAnswer(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Record the answers
-	err = h.Attempts.RecordAnswers(attemptID, questionID, selectedAnswerIDs)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	if err := h.Attempts.RecordAnswers(attemptID, questionID, selectedAnswerIDs); err != nil {
+		slog.Error("PracticeAnswer: record answers failed", "attemptID", attemptID, "questionID", questionID, "error", err)
+		http.Error(w, "Lỗi hệ thống", http.StatusInternalServerError)
 		return
 	}
 
-	// Build selected/correct answer labels for display
 	var selectedLabels, correctLabels []string
 	selectedSet := make(map[int64]bool)
 	for _, id := range selectedAnswerIDs {
@@ -130,7 +153,6 @@ func (h *Handler) PracticeAnswer(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Check correctness
 	isCorrect := len(selectedSet) == len(correctLabels)
 	if isCorrect {
 		for _, a := range question.Answers {
@@ -141,13 +163,27 @@ func (h *Handler) PracticeAnswer(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	subject, _ := h.Questions.GetSubject(subjectID)
-	answeredIDs, _ := h.Attempts.GetAnsweredQuestionIDs(attemptID)
+	subject, err := h.Questions.GetSubject(subjectID)
+	if err != nil {
+		slog.Error("PracticeAnswer: get subject failed", "subjectID", subjectID, "error", err)
+		http.Error(w, "Lỗi hệ thống", http.StatusInternalServerError)
+		return
+	}
 
-	// If all questions answered, finish the attempt to calculate score
-	isLastQuestion := len(answeredIDs) >= subject.QuestionCount
-	if isLastQuestion {
-		h.Attempts.FinishAttempt(attemptID)
+	answeredIDs, err := h.Attempts.GetAnsweredQuestionIDs(attemptID)
+	if err != nil {
+		slog.Error("PracticeAnswer: get answered IDs failed", "attemptID", attemptID, "error", err)
+		http.Error(w, "Lỗi hệ thống", http.StatusInternalServerError)
+		return
+	}
+
+	if len(answeredIDs) >= subject.QuestionCount {
+		finished, err := h.Attempts.FinishAttempt(attemptID)
+		if err != nil {
+			slog.Error("PracticeAnswer: finish attempt failed", "attemptID", attemptID, "error", err)
+		} else {
+			slog.Info("flashcard session finished", "attemptID", attemptID, "subjectID", subjectID, "score", fmt.Sprintf("%.1f%%", finished.Score), "correct", finished.CorrectCount, "total", finished.TotalQuestions)
+		}
 	}
 
 	h.render(w, "practice_result.html", map[string]any{

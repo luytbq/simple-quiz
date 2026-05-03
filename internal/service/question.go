@@ -277,12 +277,85 @@ func (s *QuestionService) ImportQuestions(data db.ImportData) (*db.Subject, int,
 	return sub, count, err
 }
 
+func (s *QuestionService) ReplaceSubject(subjectID int64, data db.ImportData) (*db.Subject, int, error) {
+	tx, err := s.DB.Begin()
+	if err != nil {
+		return nil, 0, err
+	}
+	defer tx.Rollback()
+
+	if _, err := tx.Exec("UPDATE subjects SET name = ? WHERE id = ?", data.Subject, subjectID); err != nil {
+		return nil, 0, fmt.Errorf("update subject: %w", err)
+	}
+
+	// attempt_answers.question_id has no ON DELETE CASCADE, must delete manually
+	if _, err := tx.Exec(`DELETE FROM attempt_answers WHERE question_id IN (SELECT id FROM questions WHERE subject_id = ?)`, subjectID); err != nil {
+		return nil, 0, fmt.Errorf("delete attempt_answers: %w", err)
+	}
+	if _, err := tx.Exec("DELETE FROM questions WHERE subject_id = ?", subjectID); err != nil {
+		return nil, 0, fmt.Errorf("delete questions: %w", err)
+	}
+
+	count := 0
+	for i, q := range data.Questions {
+		multiAnswer := false
+		if q.MultiAnswer != nil {
+			multiAnswer = *q.MultiAnswer
+		} else {
+			correctCount := 0
+			for _, a := range q.Answers {
+				if a.IsCorrect {
+					correctCount++
+				}
+			}
+			multiAnswer = correctCount > 1
+		}
+
+		res, err := tx.Exec(
+			"INSERT INTO questions (subject_id, content, explanation, multi_answer, order_number) VALUES (?, ?, ?, ?, ?)",
+			subjectID, q.Content, q.Explanation, multiAnswer, i+1,
+		)
+		if err != nil {
+			return nil, 0, fmt.Errorf("insert question %d: %w", i+1, err)
+		}
+		qID, _ := res.LastInsertId()
+
+		for _, a := range q.Answers {
+			if _, err := tx.Exec(
+				"INSERT INTO answers (question_id, label, content, is_correct) VALUES (?, ?, ?, ?)",
+				qID, a.Label, a.Content, a.IsCorrect,
+			); err != nil {
+				return nil, 0, fmt.Errorf("insert answer for question %d: %w", i+1, err)
+			}
+		}
+		count++
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, 0, err
+	}
+
+	sub, err := s.GetSubject(subjectID)
+	return sub, count, err
+}
+
 func (s *QuestionService) DeleteSubject(id int64) error {
-	// Delete related attempt data first
-	s.DB.Exec(`DELETE FROM attempt_answers WHERE attempt_id IN (SELECT id FROM exam_attempts WHERE subject_id = ?)`, id)
-	s.DB.Exec(`DELETE FROM exam_attempts WHERE subject_id = ?`, id)
-	_, err := s.DB.Exec("DELETE FROM subjects WHERE id = ?", id)
-	return err
+	tx, err := s.DB.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	if _, err := tx.Exec(`DELETE FROM attempt_answers WHERE attempt_id IN (SELECT id FROM exam_attempts WHERE subject_id = ?)`, id); err != nil {
+		return err
+	}
+	if _, err := tx.Exec(`DELETE FROM exam_attempts WHERE subject_id = ?`, id); err != nil {
+		return err
+	}
+	if _, err := tx.Exec(`DELETE FROM subjects WHERE id = ?`, id); err != nil {
+		return err
+	}
+	return tx.Commit()
 }
 
 func (s *QuestionService) ExportSubject(subjectID int64) (*db.ImportData, error) {

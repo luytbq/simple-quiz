@@ -1,4 +1,8 @@
 {{define "content"}}
+{{if .EditMode}}
+<h2>Chỉnh sửa đề thi</h2>
+<article class="msg-info">Đang chỉnh sửa: <strong>{{.SubjectName}}</strong></article>
+{{else}}
 <h2>Quản lý đề thi</h2>
 
 {{if .Error}}
@@ -8,10 +12,14 @@
 {{if .Success}}
 <article class="msg-success">{{.Success}}</article>
 {{end}}
+{{end}}
 
 <article>
-    <h3>Import đề thi</h3>
+    <h3>{{if .EditMode}}Chỉnh sửa nội dung JSON{{else}}Import đề thi{{end}}</h3>
     <form method="POST" action="{{bp}}/manage/check">
+        {{if .EditMode}}
+        <input type="hidden" name="subject_id" value="{{.SubjectID}}">
+        {{end}}
         <label for="json_data">Paste dữ liệu JSON hoặc chọn file</label>
         <input type="file" id="json_file" accept=".json" class="file-input">
         <textarea id="json_data" name="json_data" rows="12" placeholder='{
@@ -25,8 +33,9 @@
       ]
     }
   ]
-}' required></textarea>
+}' required>{{if .JSONData}}{{.JSONData}}{{end}}</textarea>
         <button type="submit">Kiểm tra</button>
+        {{if .EditMode}}<a href="{{bp}}/manage" role="button" class="outline" style="margin-top:0.5rem">← Huỷ</a>{{end}}
     </form>
     <script>
     document.getElementById('json_file').addEventListener('change', function(e) {
@@ -41,6 +50,7 @@
     </script>
 </article>
 
+{{if not .EditMode}}
 <h3>Danh sách đề thi</h3>
 
 {{if .Subjects}}
@@ -66,6 +76,7 @@
                    class="btn-export" data-name="{{.Name}}">
                     Export
                 </a>
+                <a href="{{bp}}/manage/{{.ID}}/edit" class="btn-edit">Edit</a>
                 <form method="POST" action="{{bp}}/manage/{{.ID}}/delete" style="display:inline"
                       data-name="{{.Name}}" data-count="{{.QuestionCount}}" class="delete-form">
                     <button type="submit" class="btn-delete">Xoá</button>
@@ -98,6 +109,7 @@
 <p id="no-results-manage" style="display:none">Không tìm thấy đề thi nào.</p>
 {{else}}
 <p>Chưa có đề thi nào.</p>
+{{end}}
 {{end}}
 
 <script>

@@ -1,3 +1,5 @@
 quiz
 *.exe
 quiz-linux
+.DS_Store
+bao_cao

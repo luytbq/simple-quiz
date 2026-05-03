@@ -1,11 +1,15 @@
 package handler
 
-import "net/http"
+import (
+	"log/slog"
+	"net/http"
+)
 
 func (h *Handler) Stats(w http.ResponseWriter, r *http.Request) {
 	subjects, err := h.Questions.ListSubjects()
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		slog.Error("Stats: list subjects failed", "error", err)
+		http.Error(w, "Lỗi hệ thống", http.StatusInternalServerError)
 		return
 	}
 
@@ -21,7 +25,8 @@ func (h *Handler) Stats(w http.ResponseWriter, r *http.Request) {
 	for _, s := range subjects {
 		stats, err := h.Attempts.GetSubjectStats(s.ID)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			slog.Error("Stats: get subject stats failed", "subjectID", s.ID, "error", err)
+			http.Error(w, "Lỗi hệ thống", http.StatusInternalServerError)
 			return
 		}
 		items = append(items, subjectWithStats{
@@ -41,19 +46,22 @@ func (h *Handler) Stats(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) SubjectStats(w http.ResponseWriter, r *http.Request) {
 	subjectID, err := pathInt64(r, "subjectID")
 	if err != nil {
-		http.Error(w, "Invalid subject ID", http.StatusBadRequest)
+		slog.Warn("SubjectStats: invalid subject ID", "raw", r.PathValue("subjectID"))
+		http.Error(w, "Subject ID không hợp lệ", http.StatusBadRequest)
 		return
 	}
 
 	subject, err := h.Questions.GetSubject(subjectID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		slog.Error("SubjectStats: get subject failed", "subjectID", subjectID, "error", err)
+		http.Error(w, "Không tìm thấy chủ đề", http.StatusNotFound)
 		return
 	}
 
 	stats, err := h.Attempts.GetSubjectStats(subjectID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		slog.Error("SubjectStats: get stats failed", "subjectID", subjectID, "error", err)
+		http.Error(w, "Lỗi hệ thống", http.StatusInternalServerError)
 		return
 	}
 	stats.Subject = *subject

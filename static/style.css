@@ -115,10 +115,30 @@ article label {
     cursor: pointer;
     padding: 2px 4px;
     border-radius: 4px;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
 }
 
 article label:hover {
     background: var(--pico-secondary-hover-background, #f0f0f0);
+}
+
+.answer-body {
+    flex: 1;
+    min-width: 0;
+}
+
+.answer-body > p:first-child {
+    margin-top: 0;
+}
+
+.answer-body > p:last-child {
+    margin-bottom: 0;
+}
+
+.answer-body pre {
+    margin: 0.5rem 0;
 }
 
 .explanation {
@@ -145,6 +165,13 @@ textarea {
     padding: 0.75rem 1rem !important;
 }
 
+.msg-info {
+    background: #e8f4fd !important;
+    border-left: 4px solid var(--pico-primary, #1095c1);
+    color: #1095c1;
+    padding: 0.75rem 1rem !important;
+}
+
 /* Manage table actions */
 td.actions {
     white-space: nowrap;
@@ -166,6 +193,23 @@ td.actions {
 }
 
 .btn-export:hover {
+    background: var(--pico-primary, #1095c1);
+    color: #fff;
+}
+
+.btn-edit {
+    display: inline-block;
+    padding: 4px 12px;
+    font-size: 0.8rem;
+    border: 1px solid var(--pico-primary, #1095c1);
+    border-radius: 6px;
+    color: var(--pico-primary, #1095c1);
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.btn-edit:hover {
     background: var(--pico-primary, #1095c1);
     color: #fff;
 }

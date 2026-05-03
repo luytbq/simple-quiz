@@ -166,6 +166,27 @@ var singleBacktickCodeRe = regexp.MustCompile(
 	"(?s)`(" + strings.Join(knownLanguages, "|") + ")\\n(.*?)`",
 )
 
+// tripleBacktickBlockRe matches correctly formatted triple-backtick code blocks
+var tripleBacktickBlockRe = regexp.MustCompile("(?s)```[a-z]*\\n.*?```")
+
+// applyOutsideCodeBlocks runs fn only on text segments outside triple-backtick blocks.
+// This prevents the single-backtick fix from corrupting already-correct code blocks.
+func applyOutsideCodeBlocks(content string, fn func(string) string) string {
+	blocks := tripleBacktickBlockRe.FindAllStringIndex(content, -1)
+	if len(blocks) == 0 {
+		return fn(content)
+	}
+	var result strings.Builder
+	pos := 0
+	for _, block := range blocks {
+		result.WriteString(fn(content[pos:block[0]]))
+		result.WriteString(content[block[0]:block[1]])
+		pos = block[1]
+	}
+	result.WriteString(fn(content[pos:]))
+	return result.String()
+}
+
 // fixRichContent fixes markdown formatting issues in a question
 func fixRichContent(q *db.ImportQuestion, num int) []string {
 	var changes []string
@@ -202,17 +223,19 @@ func fixContentMarkdown(content string, qNum int, field string) (string, []strin
 	result := content
 
 	// Fix single backtick code blocks → triple backtick
-	if singleBacktickCodeRe.MatchString(result) {
-		result = singleBacktickCodeRe.ReplaceAllStringFunc(result, func(match string) string {
+	// Only applied outside existing triple-backtick blocks to avoid false matches.
+	fixed := applyOutsideCodeBlocks(result, func(s string) string {
+		return singleBacktickCodeRe.ReplaceAllStringFunc(s, func(match string) string {
 			parts := singleBacktickCodeRe.FindStringSubmatch(match)
 			if len(parts) < 3 {
 				return match
 			}
 			return "```" + parts[1] + "\n" + parts[2] + "```"
 		})
-		if result != content {
-			changes = append(changes, fmt.Sprintf("Câu %d (%s): Sửa single backtick → triple backtick code block", qNum, field))
-		}
+	})
+	if fixed != result {
+		result = fixed
+		changes = append(changes, fmt.Sprintf("Câu %d (%s): Sửa single backtick → triple backtick code block", qNum, field))
 	}
 
 	// Ensure newlines around code blocks

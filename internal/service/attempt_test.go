@@ -412,6 +412,69 @@ func TestGetRecentAttempts(t *testing.T) {
 	}
 }
 
+func TestGetRecentAttempts_IncludesZeroScore(t *testing.T) {
+	d := setupTestDB(t)
+	qs := &QuestionService{DB: d}
+	as := &AttemptService{DB: d}
+
+	sub := importTestSubject(t, qs)
+	attempt, _ := as.CreateAttempt(sub.ID, "exam", 1)
+	q, _ := qs.GetRandomQuestion(sub.ID, nil)
+
+	// Pick a wrong answer
+	var wrongID int64
+	for _, a := range q.Answers {
+		if !a.IsCorrect {
+			wrongID = a.ID
+			break
+		}
+	}
+	as.RecordAnswer(attempt.ID, q.ID, &wrongID)
+	finished, _ := as.FinishAttempt(attempt.ID)
+	if finished.Score != 0.0 {
+		t.Fatalf("expected 0 score to set up test, got %f", finished.Score)
+	}
+
+	attempts, err := as.GetRecentAttempts(sub.ID, 10)
+	if err != nil {
+		t.Fatalf("GetRecentAttempts: %v", err)
+	}
+	if len(attempts) != 1 {
+		t.Errorf("expected 0-score attempt to appear, got %d attempts", len(attempts))
+	}
+}
+
+func TestGetSubjectStats_IncludesZeroScore(t *testing.T) {
+	d := setupTestDB(t)
+	qs := &QuestionService{DB: d}
+	as := &AttemptService{DB: d}
+
+	sub := importTestSubject(t, qs)
+	attempt, _ := as.CreateAttempt(sub.ID, "exam", 1)
+	q, _ := qs.GetRandomQuestion(sub.ID, nil)
+
+	var wrongID int64
+	for _, a := range q.Answers {
+		if !a.IsCorrect {
+			wrongID = a.ID
+			break
+		}
+	}
+	as.RecordAnswer(attempt.ID, q.ID, &wrongID)
+	as.FinishAttempt(attempt.ID)
+
+	stats, err := as.GetSubjectStats(sub.ID)
+	if err != nil {
+		t.Fatalf("GetSubjectStats: %v", err)
+	}
+	if stats.TotalAttempts != 1 {
+		t.Errorf("expected 1 attempt counted (including 0-score), got %d", stats.TotalAttempts)
+	}
+	if stats.AvgScore != 0.0 {
+		t.Errorf("expected AvgScore=0.0, got %f", stats.AvgScore)
+	}
+}
+
 func TestGetSubjectStats(t *testing.T) {
 	d := setupTestDB(t)
 	qs := &QuestionService{DB: d}

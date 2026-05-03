@@ -253,6 +253,45 @@ func TestDeleteSubject(t *testing.T) {
 	}
 }
 
+func TestDeleteSubject_CleansAttemptData(t *testing.T) {
+	d := setupTestDB(t)
+	qs := &QuestionService{DB: d}
+	as := &AttemptService{DB: d}
+
+	sub, _, _ := qs.ImportQuestions(sampleImportData())
+	attempt, _ := as.CreateAttempt(sub.ID, "exam", 1)
+	q, _ := qs.GetRandomQuestion(sub.ID, nil)
+	as.RecordAnswer(attempt.ID, q.ID, &q.Answers[0].ID)
+
+	if err := qs.DeleteSubject(sub.ID); err != nil {
+		t.Fatalf("DeleteSubject: %v", err)
+	}
+
+	var answerCount, attemptCount int
+	d.QueryRow("SELECT COUNT(*) FROM attempt_answers WHERE attempt_id = ?", attempt.ID).Scan(&answerCount)
+	d.QueryRow("SELECT COUNT(*) FROM exam_attempts WHERE subject_id = ?", sub.ID).Scan(&attemptCount)
+	if answerCount != 0 {
+		t.Errorf("expected 0 attempt_answers after delete, got %d", answerCount)
+	}
+	if attemptCount != 0 {
+		t.Errorf("expected 0 exam_attempts after delete, got %d", attemptCount)
+	}
+}
+
+func TestDeleteSubject_AllOrNothing(t *testing.T) {
+	d := setupTestDB(t)
+	qs := &QuestionService{DB: d}
+
+	sub, _, _ := qs.ImportQuestions(sampleImportData())
+
+	// Close the DB so the first Exec inside DeleteSubject fails.
+	d.Close()
+
+	if err := qs.DeleteSubject(sub.ID); err == nil {
+		t.Fatal("expected DeleteSubject to return error when DB is unusable")
+	}
+}
+
 func TestExportSubject_Roundtrip(t *testing.T) {
 	d := setupTestDB(t)
 	qs := &QuestionService{DB: d}

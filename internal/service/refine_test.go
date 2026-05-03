@@ -1,6 +1,7 @@
 package service
 
 import (
+	"encoding/json"
 	"strings"
 	"testing"
 )
@@ -90,6 +91,27 @@ func TestRefineImportData_FixSingleBacktickCodeBlocks(t *testing.T) {
 	content := result.Data.Questions[0].Content
 	if !strings.Contains(content, "```java") {
 		t.Errorf("expected triple backtick code block, got %q", content)
+	}
+}
+
+func TestRefineImportData_TripleBacktickIdempotent(t *testing.T) {
+	// After applying the fix once (single→triple backtick), re-applying should make no further changes.
+	raw := `{"subject":"Code","questions":[{"content":"Look at this:\n` + "`" + `java\nSystem.out.println();\n` + "`" + `","answers":[{"label":"A","content":"yes","is_correct":true},{"label":"B","content":"no","is_correct":false}]}]}`
+	result1 := RefineImportData(raw)
+	if !result1.OK {
+		t.Fatalf("first pass: expected OK=true; errors=%v", result1.Errors)
+	}
+
+	// Serialize the fixed data back to JSON (simulating export→re-import)
+	fixed, _ := json.Marshal(result1.Data)
+	result2 := RefineImportData(string(fixed))
+	if !result2.OK {
+		t.Fatalf("second pass: expected OK=true; errors=%v", result2.Errors)
+	}
+	for _, c := range result2.Changes {
+		if strings.Contains(c, "single backtick") {
+			t.Errorf("second pass should not report single-backtick fix (already fixed): %v", result2.Changes)
+		}
 	}
 }
 

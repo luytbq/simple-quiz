@@ -29,6 +29,20 @@ var sanitizePolicy = func() *bluemonday.Policy {
 
 var mermaidBlockRe = regexp.MustCompile(`<pre><code class="language-mermaid">([\s\S]*?)</code></pre>`)
 
+var blockTags = []string{
+	"<pre", "<ul", "<ol", "<table", "<blockquote",
+	"<h1", "<h2", "<h3", "<h4", "<h5", "<h6", "<div",
+}
+
+func hasBlockTag(s string) bool {
+	for _, t := range blockTags {
+		if strings.Contains(s, t) {
+			return true
+		}
+	}
+	return false
+}
+
 func convertMermaidBlocks(html string) string {
 	return mermaidBlockRe.ReplaceAllStringFunc(html, func(match string) string {
 		inner := mermaidBlockRe.FindStringSubmatch(match)
@@ -37,6 +51,26 @@ func convertMermaidBlocks(html string) string {
 		}
 		return `<div class="mermaid">` + inner[1] + `</div>`
 	})
+}
+
+func renderMd(s string) string {
+	var buf bytes.Buffer
+	mdRenderer.Convert([]byte(s), &buf)
+	safe := sanitizePolicy.SanitizeBytes(buf.Bytes())
+	return convertMermaidBlocks(string(safe))
+}
+
+// renderMdi renders markdown for use inside an inline context (e.g. a label).
+// It strips the wrapping <p>...</p> only when the output is exactly one paragraph
+// with no nested block elements; otherwise the full HTML is returned so that
+// block content (code, lists, tables) is emitted verbatim and styled via CSS.
+func renderMdi(s string) string {
+	result := strings.TrimSpace(renderMd(s))
+	if strings.HasPrefix(result, "<p>") && strings.HasSuffix(result, "</p>") &&
+		strings.Count(result, "<p>") == 1 && !hasBlockTag(result) {
+		result = strings.TrimSuffix(strings.TrimPrefix(result, "<p>"), "</p>")
+	}
+	return result
 }
 
 type Handler struct {
@@ -62,24 +96,8 @@ func New(qs *service.QuestionService, as *service.AttemptService, templateFS fs.
 		},
 		"bp": func() string { return basePath },
 		"v":  func() string { return buildVersion },
-		"md": func(s string) template.HTML {
-			var buf bytes.Buffer
-			mdRenderer.Convert([]byte(s), &buf)
-			safe := sanitizePolicy.SanitizeBytes(buf.Bytes())
-			result := convertMermaidBlocks(string(safe))
-			return template.HTML(result)
-		},
-		"mdi": func(s string) template.HTML {
-			var buf bytes.Buffer
-			mdRenderer.Convert([]byte(s), &buf)
-			safe := sanitizePolicy.SanitizeBytes(buf.Bytes())
-			// Strip wrapping <p>...</p> for inline use
-			str := string(safe)
-			str = strings.TrimSpace(str)
-			str = strings.TrimPrefix(str, "<p>")
-			str = strings.TrimSuffix(str, "</p>")
-			return template.HTML(str)
-		},
+		"md":  func(s string) template.HTML { return template.HTML(renderMd(s)) },
+		"mdi": func(s string) template.HTML { return template.HTML(renderMdi(s)) },
 	}
 
 	pages := []string{
@@ -119,6 +137,39 @@ func (h *Handler) render(w http.ResponseWriter, name string, data any) {
 	}
 }
 
+// responseWriter wraps http.ResponseWriter to capture the status code for logging.
+type responseWriter struct {
+	http.ResponseWriter
+	status int
+}
+
+func (rw *responseWriter) WriteHeader(code int) {
+	rw.status = code
+	rw.ResponseWriter.WriteHeader(code)
+}
+
+// LoggingMiddleware logs every request with method, path, status, and duration.
+// Static assets and favicon are excluded to reduce noise.
+func LoggingMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		start := time.Now()
+		rw := &responseWriter{ResponseWriter: w, status: http.StatusOK}
+		next.ServeHTTP(rw, r)
+
+		path := r.URL.Path
+		if strings.HasPrefix(path, "/static/") || path == "/favicon.ico" {
+			return
+		}
+
+		slog.Info("request",
+			"method", r.Method,
+			"path", path,
+			"status", rw.status,
+			"duration_ms", time.Since(start).Milliseconds(),
+		)
+	})
+}
+
 func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	// Home
 	mux.HandleFunc("GET /{$}", h.Home)
@@ -128,6 +179,7 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /manage/check", h.CheckImport)
 	mux.HandleFunc("POST /manage/confirm", h.ConfirmImport)
 	mux.HandleFunc("POST /manage/{subjectID}/delete", h.DeleteSubject)
+	mux.HandleFunc("GET /manage/{subjectID}/edit", h.EditForm)
 	mux.HandleFunc("GET /manage/{subjectID}/export", h.ExportSubject)
 
 	// Practice (flashcard)

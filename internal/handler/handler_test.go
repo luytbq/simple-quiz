@@ -56,15 +56,7 @@ func TestConvertMermaidBlocks(t *testing.T) {
 	}
 }
 
-func TestMdTemplateFunc(t *testing.T) {
-	mdFunc := func(s string) template.HTML {
-		var buf strings.Builder
-		mdRenderer.Convert([]byte(s), &buf)
-		safe := sanitizePolicy.SanitizeBytes([]byte(buf.String()))
-		result := convertMermaidBlocks(string(safe))
-		return template.HTML(result)
-	}
-
+func TestRenderMd(t *testing.T) {
 	tests := []struct {
 		name     string
 		input    string
@@ -99,7 +91,7 @@ func TestMdTemplateFunc(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			result := string(mdFunc(tc.input))
+			result := renderMd(tc.input)
 			for _, s := range tc.contains {
 				if !strings.Contains(result, s) {
 					t.Errorf("expected result to contain %q, got %q", s, result)
@@ -114,54 +106,99 @@ func TestMdTemplateFunc(t *testing.T) {
 	}
 }
 
-func TestMdiTemplateFunc(t *testing.T) {
-	mdiFunc := func(s string) template.HTML {
-		var buf strings.Builder
-		mdRenderer.Convert([]byte(s), &buf)
-		safe := sanitizePolicy.SanitizeBytes([]byte(buf.String()))
-		str := string(safe)
-		str = strings.TrimSpace(str)
-		str = strings.TrimPrefix(str, "<p>")
-		str = strings.TrimSuffix(str, "</p>")
-		return template.HTML(str)
-	}
-
+func TestRenderMdi(t *testing.T) {
 	tests := []struct {
-		name        string
-		input       string
-		shouldNotHave string
-		shouldHave    string
+		name         string
+		input        string
+		wantContains []string
+		wantExcludes []string
+		wantHasBlock bool // if true, result should NOT be just plain inline
 	}{
 		{
-			name:          "strips p wrapper",
-			input:         "Hello",
-			shouldNotHave: "<p>",
-			shouldHave:    "Hello",
+			name:         "strips wrapper for single paragraph",
+			input:        "Hello",
+			wantContains: []string{"Hello"},
+			wantExcludes: []string{"<p>", "</p>"},
 		},
 		{
-			name:          "inline code preserved",
-			input:         "Use `foo`",
-			shouldNotHave: "<p>",
-			shouldHave:    "<code>foo</code>",
+			name:         "inline code preserved, no p wrapper",
+			input:        "Use `foo`",
+			wantContains: []string{"<code>foo</code>"},
+			wantExcludes: []string{"<p>", "</p>"},
 		},
 		{
-			name:          "bold preserved",
-			input:         "**bold**",
-			shouldNotHave: "<p>",
-			shouldHave:    "<strong>bold</strong>",
+			name:         "bold preserved, no p wrapper",
+			input:        "**bold**",
+			wantContains: []string{"<strong>bold</strong>"},
+			wantExcludes: []string{"<p>", "</p>"},
+		},
+		{
+			name:         "multi-paragraph keeps valid HTML",
+			input:        "Line one\n\nLine two",
+			wantContains: []string{"<p>Line one</p>", "<p>Line two</p>"},
+		},
+		{
+			name:         "code block kept as block element",
+			input:        "```go\nfmt.Println()\n```",
+			wantContains: []string{"<pre>", "<code", "fmt.Println()", "</pre>"},
+		},
+		{
+			name:         "list kept as block element",
+			input:        "- first\n- second",
+			wantContains: []string{"<ul>", "<li>first</li>", "<li>second</li>", "</ul>"},
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			result := string(mdiFunc(tc.input))
-			if tc.shouldNotHave != "" && strings.HasPrefix(result, tc.shouldNotHave) {
-				t.Errorf("expected result NOT to start with %q, got %q", tc.shouldNotHave, result)
+			result := renderMdi(tc.input)
+			for _, s := range tc.wantContains {
+				if !strings.Contains(result, s) {
+					t.Errorf("expected result to contain %q, got %q", s, result)
+				}
 			}
-			if !strings.Contains(result, tc.shouldHave) {
-				t.Errorf("expected result to contain %q, got %q", tc.shouldHave, result)
+			for _, s := range tc.wantExcludes {
+				if strings.Contains(result, s) {
+					t.Errorf("expected result NOT to contain %q, got %q", s, result)
+				}
 			}
 		})
+	}
+}
+
+func TestRenderMdi_ValidHTMLForMultiParagraph(t *testing.T) {
+	// Previous implementation produced broken HTML like "Line 1</p>\n<p>Line 2"
+	// by blindly stripping <p>/</p>. Verify the current implementation returns balanced tags.
+	result := renderMdi("A\n\nB")
+	openP := strings.Count(result, "<p>")
+	closeP := strings.Count(result, "</p>")
+	if openP != closeP {
+		t.Errorf("unbalanced <p>/</p> tags: %d opens, %d closes in %q", openP, closeP, result)
+	}
+	if openP < 2 {
+		t.Errorf("expected at least 2 paragraphs, got %q", result)
+	}
+}
+
+func TestHasBlockTag(t *testing.T) {
+	cases := map[string]bool{
+		"plain text":                                    false,
+		"<p>paragraph</p>":                              false,
+		"<em>em</em>":                                   false,
+		"<strong>bold</strong>":                         false,
+		"<code>inline</code>":                           false,
+		"<pre><code>block</code></pre>":                 true,
+		"<ul><li>x</li></ul>":                           true,
+		"<ol><li>x</li></ol>":                           true,
+		"<table><tr><td>x</td></tr></table>":            true,
+		"<blockquote>q</blockquote>":                    true,
+		"<h1>t</h1>":                                    true,
+		"<div class=\"mermaid\">graph TD; A-->B;</div>": true,
+	}
+	for input, want := range cases {
+		if got := hasBlockTag(input); got != want {
+			t.Errorf("hasBlockTag(%q) = %v, want %v", input, got, want)
+		}
 	}
 }
 

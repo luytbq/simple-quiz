@@ -18,14 +18,14 @@
         {{range .Question.Answers}}
         <label>
             <input type="checkbox" name="answer_id" value="{{.ID}}">
-            {{.Label}}. {{mdi .Content}}
+            <span class="answer-body">{{.Label}}. {{mdi .Content}}</span>
         </label>
         {{end}}
         {{else}}
         {{range .Question.Answers}}
         <label>
             <input type="radio" name="answer_id" value="{{.ID}}" required>
-            {{.Label}}. {{mdi .Content}}
+            <span class="answer-body">{{.Label}}. {{mdi .Content}}</span>
         </label>
         {{end}}
         {{end}}

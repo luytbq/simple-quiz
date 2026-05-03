@@ -1,11 +1,15 @@
 package handler
 
-import "net/http"
+import (
+	"log/slog"
+	"net/http"
+)
 
 func (h *Handler) Home(w http.ResponseWriter, r *http.Request) {
 	subjects, err := h.Questions.ListSubjects()
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		slog.Error("Home: list subjects failed", "error", err)
+		http.Error(w, "Lỗi hệ thống", http.StatusInternalServerError)
 		return
 	}
 

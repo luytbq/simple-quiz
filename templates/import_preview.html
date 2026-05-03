@@ -21,6 +21,7 @@
 <article>
     <p>Sửa dữ liệu bên dưới rồi thử lại. Xem <a href="{{bp}}/guide">hướng dẫn</a> để biết format JSON đúng.</p>
     <form method="POST" action="{{bp}}/manage/check">
+        {{if .SubjectID}}<input type="hidden" name="subject_id" value="{{.SubjectID}}">{{end}}
         <textarea id="json_data" name="json_data" rows="15" style="font-family:monospace">{{.RawText}}</textarea>
         <button type="submit">Kiểm tra lại</button>
     </form>
@@ -67,9 +68,10 @@
 
 <form method="POST" action="{{bp}}/manage/confirm">
     <textarea name="refined_json" hidden>{{.RefinedJSON}}</textarea>
-    <div class="grid">
-        <a href="{{bp}}/manage" role="button" class="outline">← Quay lại</a>
-        <button type="submit">Xác nhận Import</button>
+    {{if .SubjectID}}<input type="hidden" name="subject_id" value="{{.SubjectID}}">{{end}}
+    <div class="grid" style="align-items:stretch">
+        <a href="{{if .SubjectID}}{{bp}}/manage/{{.SubjectID}}/edit{{else}}{{bp}}/manage{{end}}" role="button" class="outline" style="display:flex;align-items:center;justify-content:center;margin:0">← Quay lại</a>
+        <button type="submit" style="margin:0">{{if .SubjectID}}Xác nhận Cập nhật{{else}}Xác nhận Import{{end}}</button>
     </div>
 </form>
 {{end}}

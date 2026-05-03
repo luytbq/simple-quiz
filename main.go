@@ -64,10 +64,10 @@ func main() {
 	h.RegisterRoutes(mux)
 	mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServer(http.FS(staticFS))))
 
-	// Wrap with base path prefix stripping
-	var root http.Handler = mux
+	// Wrap with logging middleware then base path prefix stripping
+	var root http.Handler = handler.LoggingMiddleware(mux)
 	if basePath != "" {
-		root = http.StripPrefix(basePath, mux)
+		root = http.StripPrefix(basePath, root)
 	}
 
 	port := os.Getenv("PORT")

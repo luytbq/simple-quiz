@@ -13,14 +13,14 @@
         {{range $q.Answers}}
         <label>
             <input type="checkbox" name="q_{{$q.ID}}" value="{{.ID}}">
-            {{.Label}}. {{mdi .Content}}
+            <span class="answer-body">{{.Label}}. {{mdi .Content}}</span>
         </label>
         {{end}}
         {{else}}
         {{range $q.Answers}}
         <label>
             <input type="radio" name="q_{{$q.ID}}" value="{{.ID}}">
-            {{.Label}}. {{mdi .Content}}
+            <span class="answer-body">{{.Label}}. {{mdi .Content}}</span>
         </label>
         {{end}}
         {{end}}
