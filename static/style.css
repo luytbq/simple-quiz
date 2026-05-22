@@ -150,6 +150,30 @@ textarea {
     font-family: monospace;
 }
 
+/* Chapter picker (flashcard / exam / share setup) */
+.chapter-pick {
+    margin-bottom: 1.25rem;
+}
+
+.chapter-pick label {
+    align-items: center;
+    padding: 0.65rem 0.5rem;
+    margin: 0;
+}
+
+.chapter-pick label + label {
+    border-top: 1px solid var(--pico-muted-border-color, #e0e0e0);
+}
+
+.chapter-pick .chapter-all {
+    border-bottom: 2px solid var(--pico-muted-border-color, #e0e0e0);
+    margin-bottom: 0.25rem;
+}
+
+.chapter-pick .chapter-all + label {
+    border-top: none;
+}
+
 /* Flash messages */
 .msg-error {
     background: #fdecea !important;

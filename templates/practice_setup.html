@@ -3,16 +3,15 @@
 
 <article>
     <form method="POST" action="{{bp}}/practice/{{.Subject.ID}}/start">
-        <fieldset>
+        <fieldset class="chapter-pick">
             <legend>Chọn chương để luyện tập</legend>
-            <label>
+            <label class="chapter-all">
                 <input type="checkbox" id="check-all" checked> <strong>Tất cả</strong>
             </label>
-            <hr>
             {{range .Chapters}}
             <label>
                 <input type="checkbox" name="chapter_id" value="{{.ID}}" class="chapter-cb" checked>
-                {{.Name}} <small>({{.QuestionCount}} câu · độ quan trọng {{.Importance}})</small>
+                <span>{{.Name}}</span>
             </label>
             {{end}}
         </fieldset>
