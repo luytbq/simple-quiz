@@ -17,9 +17,18 @@ func (h *Handler) SharePage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	chapters, err := h.Questions.ListChapters(subject.ID)
+	if err != nil {
+		slog.Error("SharePage: list chapters failed", "subjectID", subject.ID, "error", err)
+		http.Error(w, "Lỗi hệ thống", http.StatusInternalServerError)
+		return
+	}
+
 	h.render(w, "share.html", map[string]any{
-		"Subject":   subject,
-		"ShareCode": code,
+		"Subject":     subject,
+		"ShareCode":   code,
+		"Chapters":    chapters,
+		"HasChapters": len(chapters) > 1,
 	})
 }
 
@@ -33,17 +42,38 @@ func (h *Handler) ShareStart(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	r.ParseForm()
+	chapterIDs := parseChapterIDs(r)
+
+	available, err := h.Questions.CountQuestionsInChapters(subject.ID, chapterIDs)
+	if err != nil {
+		slog.Error("ShareStart: count questions failed", "subjectID", subject.ID, "error", err)
+		http.Error(w, "Lỗi hệ thống", http.StatusInternalServerError)
+		return
+	}
+	if available == 0 {
+		slog.Warn("ShareStart: no questions in selected chapters", "subjectID", subject.ID)
+		http.Error(w, "Không có câu hỏi nào trong các chương đã chọn", http.StatusBadRequest)
+		return
+	}
+
 	count, err := strconv.Atoi(r.URL.Query().Get("count"))
 	if err != nil || count <= 0 {
-		count = subject.QuestionCount
+		count = available
 	}
-	if count > subject.QuestionCount {
-		count = subject.QuestionCount
+	if count > available {
+		count = available
 	}
 
 	attempt, err := h.Attempts.CreateAttempt(subject.ID, "exam", count)
 	if err != nil {
 		slog.Error("ShareStart: create attempt failed", "subjectID", subject.ID, "count", count, "error", err)
+		http.Error(w, "Lỗi hệ thống", http.StatusInternalServerError)
+		return
+	}
+
+	if err := h.Attempts.SetAttemptChapters(attempt.ID, chapterIDs); err != nil {
+		slog.Error("ShareStart: set attempt chapters failed", "attemptID", attempt.ID, "error", err)
 		http.Error(w, "Lỗi hệ thống", http.StatusInternalServerError)
 		return
 	}

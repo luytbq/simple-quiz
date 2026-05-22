@@ -23,6 +23,43 @@ func (s *AttemptService) CreateAttempt(subjectID int64, mode string, totalQuesti
 	return s.GetAttempt(id)
 }
 
+// SetAttemptChapters records which chapters an attempt was scoped to. An empty
+// slice records nothing, which downstream queries treat as "all chapters".
+func (s *AttemptService) SetAttemptChapters(attemptID int64, chapterIDs []int64) error {
+	if _, err := s.DB.Exec("DELETE FROM attempt_chapters WHERE attempt_id = ?", attemptID); err != nil {
+		return err
+	}
+	for _, cid := range chapterIDs {
+		if _, err := s.DB.Exec(
+			"INSERT OR IGNORE INTO attempt_chapters (attempt_id, chapter_id) VALUES (?, ?)",
+			attemptID, cid,
+		); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// GetAttemptChapters returns the chapter ids an attempt was scoped to (empty
+// means all chapters).
+func (s *AttemptService) GetAttemptChapters(attemptID int64) ([]int64, error) {
+	rows, err := s.DB.Query("SELECT chapter_id FROM attempt_chapters WHERE attempt_id = ?", attemptID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var ids []int64
+	for rows.Next() {
+		var id int64
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		ids = append(ids, id)
+	}
+	return ids, rows.Err()
+}
+
 func (s *AttemptService) GetAttempt(id int64) (*db.ExamAttempt, error) {
 	var a db.ExamAttempt
 	err := s.DB.QueryRow(`

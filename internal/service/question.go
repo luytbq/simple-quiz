@@ -213,6 +213,8 @@ func (s *QuestionService) GetAnswer(answerID int64) (*db.Answer, error) {
 }
 
 func (s *QuestionService) ImportQuestions(data db.ImportData) (*db.Subject, int, error) {
+	normalizeChapters(&data)
+
 	tx, err := s.DB.Begin()
 	if err != nil {
 		return nil, 0, err
@@ -232,41 +234,9 @@ func (s *QuestionService) ImportQuestions(data db.ImportData) (*db.Subject, int,
 		return nil, 0, err
 	}
 
-	count := 0
-	for i, q := range data.Questions {
-		// Auto-detect multi_answer if not explicitly set
-		multiAnswer := false
-		if q.MultiAnswer != nil {
-			multiAnswer = *q.MultiAnswer
-		} else {
-			correctCount := 0
-			for _, a := range q.Answers {
-				if a.IsCorrect {
-					correctCount++
-				}
-			}
-			multiAnswer = correctCount > 1
-		}
-
-		res, err := tx.Exec(
-			"INSERT INTO questions (subject_id, content, explanation, multi_answer, order_number) VALUES (?, ?, ?, ?, ?)",
-			subjectID, q.Content, q.Explanation, multiAnswer, i+1,
-		)
-		if err != nil {
-			return nil, 0, fmt.Errorf("insert question %d: %w", i+1, err)
-		}
-		qID, _ := res.LastInsertId()
-
-		for _, a := range q.Answers {
-			_, err := tx.Exec(
-				"INSERT INTO answers (question_id, label, content, is_correct) VALUES (?, ?, ?, ?)",
-				qID, a.Label, a.Content, a.IsCorrect,
-			)
-			if err != nil {
-				return nil, 0, fmt.Errorf("insert answer for question %d: %w", i+1, err)
-			}
-		}
-		count++
+	count, err := insertChaptersAndQuestions(tx, subjectID, &data)
+	if err != nil {
+		return nil, 0, err
 	}
 
 	if err := tx.Commit(); err != nil {
@@ -278,6 +248,8 @@ func (s *QuestionService) ImportQuestions(data db.ImportData) (*db.Subject, int,
 }
 
 func (s *QuestionService) ReplaceSubject(subjectID int64, data db.ImportData) (*db.Subject, int, error) {
+	normalizeChapters(&data)
+
 	tx, err := s.DB.Begin()
 	if err != nil {
 		return nil, 0, err
@@ -292,43 +264,22 @@ func (s *QuestionService) ReplaceSubject(subjectID int64, data db.ImportData) (*
 	if _, err := tx.Exec(`DELETE FROM attempt_answers WHERE question_id IN (SELECT id FROM questions WHERE subject_id = ?)`, subjectID); err != nil {
 		return nil, 0, fmt.Errorf("delete attempt_answers: %w", err)
 	}
+	// Old chapter selections of past attempts reference chapters we are about to
+	// drop. Delete them explicitly (also covered by ON DELETE CASCADE).
+	if _, err := tx.Exec(`DELETE FROM attempt_chapters WHERE chapter_id IN (SELECT id FROM chapters WHERE subject_id = ?)`, subjectID); err != nil {
+		return nil, 0, fmt.Errorf("delete attempt_chapters: %w", err)
+	}
+	// Questions reference chapters, so delete questions before chapters.
 	if _, err := tx.Exec("DELETE FROM questions WHERE subject_id = ?", subjectID); err != nil {
 		return nil, 0, fmt.Errorf("delete questions: %w", err)
 	}
+	if _, err := tx.Exec("DELETE FROM chapters WHERE subject_id = ?", subjectID); err != nil {
+		return nil, 0, fmt.Errorf("delete chapters: %w", err)
+	}
 
-	count := 0
-	for i, q := range data.Questions {
-		multiAnswer := false
-		if q.MultiAnswer != nil {
-			multiAnswer = *q.MultiAnswer
-		} else {
-			correctCount := 0
-			for _, a := range q.Answers {
-				if a.IsCorrect {
-					correctCount++
-				}
-			}
-			multiAnswer = correctCount > 1
-		}
-
-		res, err := tx.Exec(
-			"INSERT INTO questions (subject_id, content, explanation, multi_answer, order_number) VALUES (?, ?, ?, ?, ?)",
-			subjectID, q.Content, q.Explanation, multiAnswer, i+1,
-		)
-		if err != nil {
-			return nil, 0, fmt.Errorf("insert question %d: %w", i+1, err)
-		}
-		qID, _ := res.LastInsertId()
-
-		for _, a := range q.Answers {
-			if _, err := tx.Exec(
-				"INSERT INTO answers (question_id, label, content, is_correct) VALUES (?, ?, ?, ?)",
-				qID, a.Label, a.Content, a.IsCorrect,
-			); err != nil {
-				return nil, 0, fmt.Errorf("insert answer for question %d: %w", i+1, err)
-			}
-		}
-		count++
+	count, err := insertChaptersAndQuestions(tx, subjectID, &data)
+	if err != nil {
+		return nil, 0, err
 	}
 
 	if err := tx.Commit(); err != nil {
@@ -364,8 +315,16 @@ func (s *QuestionService) ExportSubject(subjectID int64) (*db.ImportData, error)
 		return nil, err
 	}
 
+	chapters, err := s.ListChapters(subjectID)
+	if err != nil {
+		return nil, err
+	}
+	// Only emit chapter info when there is real grouping (>1 chapter). A single
+	// chapter (e.g. the auto-created default) round-trips as the legacy format.
+	includeChapters := len(chapters) > 1
+
 	rows, err := s.DB.Query(
-		"SELECT id, content, explanation, multi_answer FROM questions WHERE subject_id = ? ORDER BY order_number",
+		"SELECT id, chapter_id, content, explanation, multi_answer FROM questions WHERE subject_id = ? ORDER BY order_number",
 		subjectID,
 	)
 	if err != nil {
@@ -376,9 +335,10 @@ func (s *QuestionService) ExportSubject(subjectID int64) (*db.ImportData, error)
 	var questions []db.ImportQuestion
 	for rows.Next() {
 		var qID int64
+		var chapterID *int64
 		var content, explanation string
 		var multiAnswer bool
-		if err := rows.Scan(&qID, &content, &explanation, &multiAnswer); err != nil {
+		if err := rows.Scan(&qID, &chapterID, &content, &explanation, &multiAnswer); err != nil {
 			return nil, err
 		}
 
@@ -403,14 +363,28 @@ func (s *QuestionService) ExportSubject(subjectID int64) (*db.ImportData, error)
 		if explanation != "" {
 			iq.Explanation = explanation
 		}
+		if includeChapters && chapterID != nil {
+			id := int(*chapterID)
+			iq.ChapterID = &id
+		}
 
 		questions = append(questions, iq)
 	}
 
-	return &db.ImportData{
+	data := &db.ImportData{
 		Subject:   sub.Name,
 		Questions: questions,
-	}, nil
+	}
+	if includeChapters {
+		for _, c := range chapters {
+			data.Chapters = append(data.Chapters, db.ImportChapter{
+				ID:         int(c.ID),
+				Name:       c.Name,
+				Importance: c.Importance,
+			})
+		}
+	}
+	return data, nil
 }
 
 func (s *QuestionService) getAnswers(questionID int64) ([]db.Answer, error) {

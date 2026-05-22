@@ -19,7 +19,8 @@
         <div class="prompt-header">
             <div class="prompt-tabs">
                 <button class="prompt-tab active" data-tab="basic">Cơ bản</button>
-                <button class="prompt-tab" data-tab="rich">Rich content</button>
+                <button class="prompt-tab" data-tab="rich-without-chapters">Rich content</button>
+                <button class="prompt-tab" data-tab="rich-with-chapters">Rich + Phân chương</button>
             </div>
             <button class="copy-btn" id="copy-prompt-btn">
                 <svg class="icon-copy" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
@@ -60,7 +61,7 @@ Chỉ trả về JSON hợp lệ, không giải thích:
   ]
 }</pre>
 
-        <pre class="prompt-content" id="prompt-rich">Tạo bộ câu hỏi trắc nghiệm để ôn tập/luyện thi.
+        <pre class="prompt-content" id="prompt-rich-without-chapters">Tạo bộ câu hỏi trắc nghiệm để ôn tập/luyện thi.
 
 Chủ đề: [CHỦ ĐỀ]
 Số lượng câu hỏi: [SỐ LƯỢNG]
@@ -117,6 +118,68 @@ Chỉ trả về JSON hợp lệ, không giải thích:
     }
   ]
 }</pre>
+
+        <pre class="prompt-content" id="prompt-rich-with-chapters">Tạo bộ câu hỏi trắc nghiệm để ôn tập/luyện thi, có phân chương.
+
+Chủ đề: [CHỦ ĐỀ]
+Các chương: [LIỆT KÊ CHƯƠNG, vd: 1) Giới thiệu, 2) Phần A, 3) Phần B]
+Số lượng câu hỏi: [SỐ LƯỢNG]
+Ngôn ngữ: Tiếng Việt
+
+Yêu cầu:
+- Mỗi câu hỏi có đúng 4 đáp án (A, B, C, D)
+- Đa dạng độ khó (dễ, trung bình, khó)
+- Thêm "explanation" khi đáp án không hiển nhiên
+- Phân chương:
+  + Khai báo các chương trong mảng "chapters",
+    mỗi chương có "id", "name" và "importance"
+  + "importance" là độ quan trọng từ 1 đến 10
+    (mặc định 5). Chương quan trọng hơn sẽ được
+    lấy nhiều câu hơn khi thi thử số câu giới hạn.
+  + Mỗi câu hỏi có "chapter_id" trỏ tới "id" của
+    chương tương ứng.
+- Nội dung hỗ trợ Markdown. Quy tắc format:
+  + Xuống dòng trong JSON string dùng \n
+  + Code block PHẢI dùng TRIPLE backtick (```),
+    KHÔNG dùng single backtick.
+    Ví dụ: \n```java\ncode here\n```\n
+  + Đáp án là code ngắn: dùng inline code "`value`"
+  + Sơ đồ có cấu trúc: dùng ```mermaid block
+  + Minh hoạ khác: dùng ASCII art trong ``` block
+
+Chỉ trả về JSON hợp lệ, không giải thích:
+
+{
+  "subject": "[Tên chủ đề]",
+  "chapters": [
+    {"id": 1, "name": "Chương 1 - Giới thiệu", "importance": 4},
+    {"id": 2, "name": "Chương 2 - Phần A", "importance": 10},
+    {"id": 3, "name": "Chương 3 - Phần B", "importance": 8}
+  ],
+  "questions": [
+    {
+      "content": "Đoạn code sau in ra gì?\n\n```java\nString s = \"hello\";\nSystem.out.println(s.toUpperCase());\n```",
+      "chapter_id": 2,
+      "explanation": "`toUpperCase()` trả về **String mới**.",
+      "answers": [
+        {"label": "A", "content": "`HELLO`", "is_correct": true},
+        {"label": "B", "content": "`hello`", "is_correct": false},
+        {"label": "C", "content": "`Hello`", "is_correct": false},
+        {"label": "D", "content": "Lỗi biên dịch", "is_correct": false}
+      ]
+    },
+    {
+      "content": "Mục tiêu chính của phần giới thiệu là gì?",
+      "chapter_id": 1,
+      "answers": [
+        {"label": "A", "content": "Tổng quan khái niệm", "is_correct": true},
+        {"label": "B", "content": "Tối ưu hiệu năng", "is_correct": false},
+        {"label": "C", "content": "Triển khai production", "is_correct": false},
+        {"label": "D", "content": "Gỡ lỗi nâng cao", "is_correct": false}
+      ]
+    }
+  ]
+}</pre>
     </div>
     <p>Sau khi nhận JSON, paste vào <a href="{{bp}}/manage">trang Import</a> để thêm câu hỏi.</p>
 
@@ -158,7 +221,17 @@ Chỉ trả về JSON hợp lệ, không giải thích:
 </article>
 
 <article>
-    <h3>4. Loại câu hỏi</h3>
+    <h3>4. Phân chương</h3>
+    <p>Bộ câu hỏi có thể chia thành nhiều chương, mỗi chương có <strong>độ quan trọng (importance) 1–10</strong> (mặc định 5). Khai báo chương trong JSON qua mảng <code>chapters</code> và gán câu hỏi bằng <code>chapter_id</code> (xem tab <em>Rich + Phân chương</em>).</p>
+    <ul>
+        <li>Đề có <strong>nhiều hơn 1 chương</strong> → khi vào Flashcard hoặc Thi thử sẽ hiện danh sách chương để tick chọn.</li>
+        <li><strong>Thi thử</strong> với số câu giới hạn: số câu mỗi chương được phân bổ theo độ quan trọng, mỗi chương ít nhất 1 câu, tổng đúng bằng số câu yêu cầu.</li>
+        <li>Dữ liệu cũ / không khai báo chương → gom vào một chương <em>"Mặc định"</em> nên giao diện chọn chương không hiển thị.</li>
+    </ul>
+</article>
+
+<article>
+    <h3>5. Loại câu hỏi</h3>
     <p><strong>Một đáp án:</strong> Hiển thị dạng radio button — chọn 1 đáp án duy nhất.</p>
     <p><strong>Nhiều đáp án:</strong> Hiển thị dạng checkbox kèm ghi chú <em>"(Chọn nhiều đáp án)"</em> — phải chọn đúng tất cả đáp án đúng mới được tính điểm.</p>
     <p><strong>Rich content:</strong> Câu hỏi và đáp án hỗ trợ Markdown — code blocks, in đậm/nghiêng, hình ảnh base64.</p>
@@ -167,7 +240,7 @@ Chỉ trả về JSON hợp lệ, không giải thích:
 
 
 <article>
-    <h3>5. Thống kê</h3>
+    <h3>6. Thống kê</h3>
     <p>Vào <a href="{{bp}}/stats">Thống kê</a> để xem tỷ lệ chính xác, điểm trung bình, điểm cao nhất và lịch sử làm bài theo từng chủ đề.</p>
 </article>
 

@@ -8,6 +8,43 @@ import (
 	"strconv"
 )
 
+// PracticeSetup is the flashcard entry point. With a single chapter it starts
+// immediately (preserving the one-click flow); with multiple chapters it shows
+// a page to pick which chapters to study.
+func (h *Handler) PracticeSetup(w http.ResponseWriter, r *http.Request) {
+	subjectID, err := pathInt64(r, "subjectID")
+	if err != nil {
+		slog.Warn("PracticeSetup: invalid subject ID", "raw", r.PathValue("subjectID"))
+		http.Error(w, "Subject ID không hợp lệ", http.StatusBadRequest)
+		return
+	}
+
+	subject, err := h.Questions.GetSubject(subjectID)
+	if err != nil {
+		slog.Error("PracticeSetup: get subject failed", "subjectID", subjectID, "error", err)
+		http.Error(w, "Không tìm thấy chủ đề", http.StatusNotFound)
+		return
+	}
+
+	chapters, err := h.Questions.ListChapters(subjectID)
+	if err != nil {
+		slog.Error("PracticeSetup: list chapters failed", "subjectID", subjectID, "error", err)
+		http.Error(w, "Lỗi hệ thống", http.StatusInternalServerError)
+		return
+	}
+
+	if len(chapters) <= 1 {
+		h.startPractice(w, r, subjectID, nil)
+		return
+	}
+
+	h.render(w, "practice_setup.html", map[string]any{
+		"Subject":  subject,
+		"Chapters": chapters,
+	})
+}
+
+// PracticeStart creates a flashcard attempt scoped to the selected chapters.
 func (h *Handler) PracticeStart(w http.ResponseWriter, r *http.Request) {
 	subjectID, err := pathInt64(r, "subjectID")
 	if err != nil {
@@ -15,17 +52,32 @@ func (h *Handler) PracticeStart(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Subject ID không hợp lệ", http.StatusBadRequest)
 		return
 	}
+	r.ParseForm()
+	h.startPractice(w, r, subjectID, parseChapterIDs(r))
+}
 
-	count, err := h.Questions.CountQuestions(subjectID)
+func (h *Handler) startPractice(w http.ResponseWriter, r *http.Request, subjectID int64, chapterIDs []int64) {
+	count, err := h.Questions.CountQuestionsInChapters(subjectID, chapterIDs)
 	if err != nil {
-		slog.Error("PracticeStart: count questions failed", "subjectID", subjectID, "error", err)
+		slog.Error("startPractice: count questions failed", "subjectID", subjectID, "error", err)
 		http.Error(w, "Lỗi hệ thống", http.StatusInternalServerError)
+		return
+	}
+	if count == 0 {
+		slog.Warn("startPractice: no questions in selected chapters", "subjectID", subjectID)
+		http.Error(w, "Không có câu hỏi nào trong các chương đã chọn", http.StatusBadRequest)
 		return
 	}
 
 	attempt, err := h.Attempts.CreateAttempt(subjectID, "flashcard", count)
 	if err != nil {
-		slog.Error("PracticeStart: create attempt failed", "subjectID", subjectID, "error", err)
+		slog.Error("startPractice: create attempt failed", "subjectID", subjectID, "error", err)
+		http.Error(w, "Lỗi hệ thống", http.StatusInternalServerError)
+		return
+	}
+
+	if err := h.Attempts.SetAttemptChapters(attempt.ID, chapterIDs); err != nil {
+		slog.Error("startPractice: set attempt chapters failed", "attemptID", attempt.ID, "error", err)
 		http.Error(w, "Lỗi hệ thống", http.StatusInternalServerError)
 		return
 	}
@@ -55,6 +107,13 @@ func (h *Handler) PracticeQuestion(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	chapterIDs, err := h.Attempts.GetAttemptChapters(attemptID)
+	if err != nil {
+		slog.Error("PracticeQuestion: get attempt chapters failed", "attemptID", attemptID, "error", err)
+		http.Error(w, "Lỗi hệ thống", http.StatusInternalServerError)
+		return
+	}
+
 	answeredIDs, err := h.Attempts.GetAnsweredQuestionIDs(attemptID)
 	if err != nil {
 		slog.Error("PracticeQuestion: get answered IDs failed", "attemptID", attemptID, "error", err)
@@ -62,7 +121,7 @@ func (h *Handler) PracticeQuestion(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	question, err := h.Questions.GetRandomQuestion(subjectID, answeredIDs)
+	question, err := h.Questions.GetRandomQuestionInChapters(subjectID, chapterIDs, answeredIDs)
 	if err == sql.ErrNoRows {
 		if _, err := h.Attempts.FinishAttempt(attemptID); err != nil {
 			slog.Error("PracticeQuestion: finish attempt failed", "attemptID", attemptID, "error", err)
@@ -76,12 +135,19 @@ func (h *Handler) PracticeQuestion(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	total, err := h.Questions.CountQuestionsInChapters(subjectID, chapterIDs)
+	if err != nil {
+		slog.Error("PracticeQuestion: count questions failed", "subjectID", subjectID, "error", err)
+		http.Error(w, "Lỗi hệ thống", http.StatusInternalServerError)
+		return
+	}
+
 	h.render(w, "practice.html", map[string]any{
 		"Subject":   subject,
 		"Question":  question,
 		"AttemptID": attemptID,
 		"Progress":  len(answeredIDs) + 1,
-		"Total":     subject.QuestionCount,
+		"Total":     total,
 	})
 }
 
@@ -170,6 +236,20 @@ func (h *Handler) PracticeAnswer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	chapterIDs, err := h.Attempts.GetAttemptChapters(attemptID)
+	if err != nil {
+		slog.Error("PracticeAnswer: get attempt chapters failed", "attemptID", attemptID, "error", err)
+		http.Error(w, "Lỗi hệ thống", http.StatusInternalServerError)
+		return
+	}
+
+	total, err := h.Questions.CountQuestionsInChapters(subjectID, chapterIDs)
+	if err != nil {
+		slog.Error("PracticeAnswer: count questions failed", "subjectID", subjectID, "error", err)
+		http.Error(w, "Lỗi hệ thống", http.StatusInternalServerError)
+		return
+	}
+
 	answeredIDs, err := h.Attempts.GetAnsweredQuestionIDs(attemptID)
 	if err != nil {
 		slog.Error("PracticeAnswer: get answered IDs failed", "attemptID", attemptID, "error", err)
@@ -177,7 +257,7 @@ func (h *Handler) PracticeAnswer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if len(answeredIDs) >= subject.QuestionCount {
+	if len(answeredIDs) >= total {
 		finished, err := h.Attempts.FinishAttempt(attemptID)
 		if err != nil {
 			slog.Error("PracticeAnswer: finish attempt failed", "attemptID", attemptID, "error", err)
@@ -195,6 +275,6 @@ func (h *Handler) PracticeAnswer(w http.ResponseWriter, r *http.Request) {
 		"AttemptID":      attemptID,
 		"SubjectID":      subjectID,
 		"Progress":       len(answeredIDs),
-		"Total":          subject.QuestionCount,
+		"Total":          total,
 	})
 }

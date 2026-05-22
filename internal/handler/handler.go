@@ -101,7 +101,7 @@ func New(qs *service.QuestionService, as *service.AttemptService, templateFS fs.
 	}
 
 	pages := []string{
-		"home.html", "practice.html", "practice_result.html",
+		"home.html", "practice_setup.html", "practice.html", "practice_result.html",
 		"exam_setup.html", "exam.html", "exam_result.html",
 		"import.html", "import_preview.html", "stats.html", "stats_detail.html", "guide.html", "share.html",
 	}
@@ -183,7 +183,8 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /manage/{subjectID}/export", h.ExportSubject)
 
 	// Practice (flashcard)
-	mux.HandleFunc("GET /practice/{subjectID}", h.PracticeStart)
+	mux.HandleFunc("GET /practice/{subjectID}", h.PracticeSetup)
+	mux.HandleFunc("POST /practice/{subjectID}/start", h.PracticeStart)
 	mux.HandleFunc("GET /practice/{subjectID}/question", h.PracticeQuestion)
 	mux.HandleFunc("POST /practice/{subjectID}/answer", h.PracticeAnswer)
 
@@ -213,4 +214,16 @@ func (h *Handler) url(path string) string {
 func pathInt64(r *http.Request, name string) (int64, error) {
 	v := r.PathValue(name)
 	return strconv.ParseInt(v, 10, 64)
+}
+
+// parseChapterIDs reads the (possibly repeated) "chapter_id" form field. An
+// empty result means "all chapters". The form must already be parsed.
+func parseChapterIDs(r *http.Request) []int64 {
+	var ids []int64
+	for _, v := range r.Form["chapter_id"] {
+		if id, err := strconv.ParseInt(v, 10, 64); err == nil {
+			ids = append(ids, id)
+		}
+	}
+	return ids
 }

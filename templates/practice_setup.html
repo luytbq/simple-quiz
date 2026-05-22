@@ -1,0 +1,35 @@
+{{define "content"}}
+<h2>{{.Subject.Name}} — Chọn chương (Flashcard)</h2>
+
+<article>
+    <form method="POST" action="{{bp}}/practice/{{.Subject.ID}}/start">
+        <fieldset>
+            <legend>Chọn chương để luyện tập</legend>
+            <label>
+                <input type="checkbox" id="check-all" checked> <strong>Tất cả</strong>
+            </label>
+            <hr>
+            {{range .Chapters}}
+            <label>
+                <input type="checkbox" name="chapter_id" value="{{.ID}}" class="chapter-cb" checked>
+                {{.Name}} <small>({{.QuestionCount}} câu · độ quan trọng {{.Importance}})</small>
+            </label>
+            {{end}}
+        </fieldset>
+        <button type="submit">Bắt đầu flashcard</button>
+    </form>
+</article>
+
+<script>
+(function () {
+    const all = document.getElementById('check-all');
+    const cbs = Array.from(document.querySelectorAll('.chapter-cb'));
+    all.addEventListener('change', () => {
+        cbs.forEach(cb => { cb.checked = all.checked; });
+    });
+    cbs.forEach(cb => cb.addEventListener('change', () => {
+        all.checked = cbs.every(c => c.checked);
+    }));
+})();
+</script>
+{{end}}

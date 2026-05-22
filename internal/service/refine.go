@@ -44,6 +44,11 @@ func RefineImportData(raw string) *RefineResult {
 		result.Changes = append(result.Changes, qChanges...)
 	}
 
+	// Step 3.5: Normalize chapter fields. Strategy is to fill data rather than
+	// fail — missing names, out-of-range importance and undeclared chapter_id
+	// references are all repaired here instead of producing errors.
+	result.Changes = append(result.Changes, normalizeChapters(&data)...)
+
 	// Step 4: Schema validation
 	errors := validateSchema(&data)
 	if len(errors) > 0 {

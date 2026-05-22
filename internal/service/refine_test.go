@@ -20,6 +20,45 @@ func TestRefineImportData_ValidJSON(t *testing.T) {
 	}
 }
 
+func TestRefineImportData_ChaptersFilledNotErrored(t *testing.T) {
+	// Chapter missing name + out-of-range importance, and a question referencing
+	// an undeclared chapter_id. None of these should fail the import.
+	raw := `{
+		"subject": "Chap",
+		"chapters": [
+			{"id": 1, "importance": 0},
+			{"id": 2, "name": "Hai", "importance": 99}
+		],
+		"questions": [
+			{"content": "Q1?", "chapter_id": 1, "answers": [{"label":"A","content":"a","is_correct":true},{"label":"B","content":"b"}]},
+			{"content": "Q2?", "chapter_id": 7, "answers": [{"label":"A","content":"a","is_correct":true},{"label":"B","content":"b"}]}
+		]
+	}`
+	result := RefineImportData(raw)
+	if !result.OK {
+		t.Fatalf("expected OK=true (chapters should be filled, not errored); errors=%v, help=%s", result.Errors, result.HelpHTML)
+	}
+	if result.Data.Chapters[0].Name != "1" {
+		t.Errorf("missing name should become id, got %q", result.Data.Chapters[0].Name)
+	}
+	if result.Data.Chapters[1].Importance != 10 {
+		t.Errorf("importance 99 should clamp to 10, got %d", result.Data.Chapters[1].Importance)
+	}
+	// chapter_id 7 should have been auto-created.
+	hasSeven := false
+	for _, c := range result.Data.Chapters {
+		if c.ID == 7 {
+			hasSeven = true
+		}
+	}
+	if !hasSeven {
+		t.Errorf("undeclared chapter_id 7 should be auto-created, chapters=%+v", result.Data.Chapters)
+	}
+	if len(result.Changes) == 0 {
+		t.Error("expected change descriptions for the chapter fixes")
+	}
+}
+
 func TestRefineImportData_StripMarkdownWrapper(t *testing.T) {
 	raw := "```json\n" + `{"subject":"Go","questions":[{"content":"Q?","answers":[{"label":"A","content":"yes","is_correct":true},{"label":"B","content":"no","is_correct":false}]}]}` + "\n```"
 	result := RefineImportData(raw)

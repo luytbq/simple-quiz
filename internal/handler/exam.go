@@ -23,8 +23,17 @@ func (h *Handler) ExamSetup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	chapters, err := h.Questions.ListChapters(subjectID)
+	if err != nil {
+		slog.Error("ExamSetup: list chapters failed", "subjectID", subjectID, "error", err)
+		http.Error(w, "Lỗi hệ thống", http.StatusInternalServerError)
+		return
+	}
+
 	h.render(w, "exam_setup.html", map[string]any{
-		"Subject": subject,
+		"Subject":     subject,
+		"Chapters":    chapters,
+		"HasChapters": len(chapters) > 1,
 	})
 }
 
@@ -44,9 +53,33 @@ func (h *Handler) ExamStart(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	chapterIDs := parseChapterIDs(r)
+
+	// Clamp the requested count to what is available in the selected chapters.
+	available, err := h.Questions.CountQuestionsInChapters(subjectID, chapterIDs)
+	if err != nil {
+		slog.Error("ExamStart: count questions failed", "subjectID", subjectID, "error", err)
+		http.Error(w, "Lỗi hệ thống", http.StatusInternalServerError)
+		return
+	}
+	if available == 0 {
+		slog.Warn("ExamStart: no questions in selected chapters", "subjectID", subjectID)
+		http.Error(w, "Không có câu hỏi nào trong các chương đã chọn", http.StatusBadRequest)
+		return
+	}
+	if count > available {
+		count = available
+	}
+
 	attempt, err := h.Attempts.CreateAttempt(subjectID, "exam", count)
 	if err != nil {
 		slog.Error("ExamStart: create attempt failed", "subjectID", subjectID, "count", count, "error", err)
+		http.Error(w, "Lỗi hệ thống", http.StatusInternalServerError)
+		return
+	}
+
+	if err := h.Attempts.SetAttemptChapters(attempt.ID, chapterIDs); err != nil {
+		slog.Error("ExamStart: set attempt chapters failed", "attemptID", attempt.ID, "error", err)
 		http.Error(w, "Lỗi hệ thống", http.StatusInternalServerError)
 		return
 	}
@@ -69,7 +102,14 @@ func (h *Handler) ExamTake(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	questions, err := h.Questions.GetQuestions(attempt.SubjectID, attempt.TotalQuestions)
+	chapterIDs, err := h.Attempts.GetAttemptChapters(attemptID)
+	if err != nil {
+		slog.Error("ExamTake: get attempt chapters failed", "attemptID", attemptID, "error", err)
+		http.Error(w, "Lỗi hệ thống", http.StatusInternalServerError)
+		return
+	}
+
+	questions, err := h.Questions.GetExamQuestions(attempt.SubjectID, chapterIDs, attempt.TotalQuestions)
 	if err != nil {
 		slog.Error("ExamTake: get questions failed", "subjectID", attempt.SubjectID, "count", attempt.TotalQuestions, "error", err)
 		http.Error(w, "Lỗi hệ thống", http.StatusInternalServerError)

@@ -15,6 +15,72 @@ func importTestSubject(t *testing.T, qs *QuestionService) *db.Subject {
 	return sub
 }
 
+func TestSetAndGetAttemptChapters(t *testing.T) {
+	d := setupTestDB(t)
+	qs := &QuestionService{DB: d}
+	as := &AttemptService{DB: d}
+
+	sub, _, _ := qs.ImportQuestions(importDataWithChapters("Subj", 2, 4, 3, 10))
+	chapters, _ := qs.ListChapters(sub.ID)
+	attempt, _ := as.CreateAttempt(sub.ID, "exam", 5)
+
+	want := []int64{chapters[0].ID, chapters[1].ID}
+	if err := as.SetAttemptChapters(attempt.ID, want); err != nil {
+		t.Fatalf("SetAttemptChapters: %v", err)
+	}
+	got, err := as.GetAttemptChapters(attempt.ID)
+	if err != nil {
+		t.Fatalf("GetAttemptChapters: %v", err)
+	}
+	if len(got) != 2 {
+		t.Fatalf("got %d chapters, want 2", len(got))
+	}
+
+	// Setting again replaces the previous selection.
+	if err := as.SetAttemptChapters(attempt.ID, []int64{chapters[0].ID}); err != nil {
+		t.Fatalf("SetAttemptChapters replace: %v", err)
+	}
+	got, _ = as.GetAttemptChapters(attempt.ID)
+	if len(got) != 1 || got[0] != chapters[0].ID {
+		t.Errorf("replace failed, got %v", got)
+	}
+
+	// Empty selection clears everything (means "all chapters").
+	if err := as.SetAttemptChapters(attempt.ID, nil); err != nil {
+		t.Fatalf("SetAttemptChapters empty: %v", err)
+	}
+	got, _ = as.GetAttemptChapters(attempt.ID)
+	if len(got) != 0 {
+		t.Errorf("expected empty selection, got %v", got)
+	}
+}
+
+func TestDeleteSubject_CleansAttemptChapters(t *testing.T) {
+	d := setupTestDB(t)
+	qs := &QuestionService{DB: d}
+	as := &AttemptService{DB: d}
+
+	sub, _, _ := qs.ImportQuestions(importDataWithChapters("Subj", 2, 4, 3, 10))
+	chapters, _ := qs.ListChapters(sub.ID)
+	attempt, _ := as.CreateAttempt(sub.ID, "exam", 5)
+	as.SetAttemptChapters(attempt.ID, []int64{chapters[0].ID, chapters[1].ID})
+
+	if err := qs.DeleteSubject(sub.ID); err != nil {
+		t.Fatalf("DeleteSubject: %v", err)
+	}
+
+	var n int
+	d.QueryRow("SELECT COUNT(*) FROM attempt_chapters WHERE attempt_id = ?", attempt.ID).Scan(&n)
+	if n != 0 {
+		t.Errorf("expected attempt_chapters cleaned up, got %d rows", n)
+	}
+	var chapterRows int
+	d.QueryRow("SELECT COUNT(*) FROM chapters WHERE subject_id = ?", sub.ID).Scan(&chapterRows)
+	if chapterRows != 0 {
+		t.Errorf("expected chapters deleted with subject, got %d rows", chapterRows)
+	}
+}
+
 func TestCreateAttempt(t *testing.T) {
 	d := setupTestDB(t)
 	qs := &QuestionService{DB: d}

@@ -49,9 +49,11 @@ The app auto-fixes common issues: strips markdown wrappers, trailing commas, ext
 
 **Exam** — Choose question count, answer all, submit, get score + full review.
 
+When a set has more than one chapter, both modes first show a chapter chooser. In exam mode the chosen question count is split across the selected chapters by importance — each selected chapter gets at least one question and the total matches the count you asked for.
+
 ### Share
 
-Each subject gets a share link (`/s/{code}`). Anyone with the link can practice — no login needed.
+Each subject gets a share link (`/s/{code}`). Anyone with the link can practice — no login needed. Shared sets with multiple chapters expose the same chapter chooser.
 
 ---
 
@@ -64,11 +66,19 @@ Each subject gets a share link (`/s/{code}`). Anyone with the link can practice 
 ```json
 {
   "subject": "string (required) — topic name",
+  "chapters": [
+    {
+      "id": "integer (required within file) — referenced by questions",
+      "name": "string (optional) — defaults to the id if omitted",
+      "importance": "integer 1-10 (optional) — defaults to 5"
+    }
+  ],
   "questions": [
     {
       "content": "string (required) — question text, supports Markdown",
       "explanation": "string (optional) — shown after answering, only when answer is non-obvious",
       "multi_answer": "boolean (optional) — auto-detected if omitted",
+      "chapter_id": "integer (optional) — references a chapters[].id; omitted → default chapter",
       "answers": [
         {
           "label": "string (required) — e.g. A, B, C, D",
@@ -81,6 +91,8 @@ Each subject gets a share link (`/s/{code}`). Anyone with the link can practice 
 }
 ```
 
+`chapters` is optional. Omit it (and `chapter_id`) for an ungrouped set — every question then lands in a single auto-created "Mặc định" chapter and the chapter chooser stays hidden.
+
 ### Validation Rules
 
 1. `subject`: non-empty string
@@ -89,6 +101,7 @@ Each subject gets a share link (`/s/{code}`). Anyone with the link can practice 
 4. Each answer must have `label` (unique within question), `content`, and `is_correct`
 5. Each question must have **at least one** answer with `is_correct: true`
 6. If multiple answers have `is_correct: true`, the question is automatically treated as multi-answer (checkboxes instead of radio buttons)
+7. Chapter fields are repaired rather than rejected: a missing `name` becomes its `id`, `importance` is clamped to 1-10 (default 5), and a `chapter_id` not declared in `chapters` is auto-created.
 
 ### Markdown Formatting
 

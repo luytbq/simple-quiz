@@ -41,15 +41,19 @@ Single-binary Go web app (Go 1.22+ ServeMux, html/template, modernc.org/sqlite).
 
 **Template pattern**: Each page defines `{{define "content"}}...{{end}}`. Handler parses each page individually with `layout.html` into `map[string]*template.Template`, then renders via `ExecuteTemplate(w, "layout", data)`.
 
-**Database**: SQLite with WAL mode. 5 tables: `subjects`, `questions`, `answers`, `exam_attempts`, `attempt_answers`. Schema lives in `internal/db/db.go` as a const string, auto-migrated via `CREATE TABLE IF NOT EXISTS`.
+**Database**: SQLite with WAL mode. 7 tables: `subjects`, `chapters`, `questions`, `answers`, `exam_attempts`, `attempt_answers`, `attempt_chapters`. Schema lives in `internal/db/db.go` as a const string, auto-migrated via `CREATE TABLE IF NOT EXISTS` + idempotent `ALTER TABLE ... ADD COLUMN`. `Migrate()` also backfills a "Mặc định" chapter for any pre-chapters questions (`backfillDefaultChapters`).
 
 **JSON import format**:
 ```json
 {
   "subject": "Subject Name",
+  "chapters": [
+    {"id": 1, "name": "Chapter 1", "importance": 4}
+  ],
   "questions": [
     {
       "content": "Question?",
+      "chapter_id": 1,
       "answers": [
         {"label": "A", "content": "...", "is_correct": false},
         {"label": "B", "content": "...", "is_correct": true}
@@ -58,6 +62,7 @@ Single-binary Go web app (Go 1.22+ ServeMux, html/template, modernc.org/sqlite).
   ]
 }
 ```
+`chapters` and `chapter_id` are optional; when absent, questions go into one auto-created "Mặc định" chapter (importance 5). Chapter fields are never rejected — `normalizeChapters` (`internal/service/chapter.go`) fills a missing name from the id, clamps importance to 1-10, and auto-creates undeclared `chapter_id`s.
 
 ## Rules
 
@@ -68,3 +73,5 @@ Single-binary Go web app (Go 1.22+ ServeMux, html/template, modernc.org/sqlite).
 - Flashcard mode avoids repeat questions by tracking answered IDs in `attempt_answers` and excluding them via `NOT IN`
 - Answer order is shuffled at read time (not stored), using `math/rand/v2`
 - Subject import is upsert: if subject name exists, questions are appended
+- Chapters: each question belongs to a chapter with `importance` 1-10 (default 5). Setup pages (`exam_setup`, `practice_setup`, `share`) show a chapter chooser only when a subject has >1 chapter. The selected chapter ids are persisted per attempt in `attempt_chapters` so `ExamTake`/`PracticeQuestion` can re-apply the filter.
+- Exam question allocation across chapters lives in `allocateQuestions` (`internal/service/chapter.go`): distributes the requested count by importance, guaranteeing (in priority order) exact total → ≥1 per selected chapter → proportional split, with each chapter capped at its available questions.

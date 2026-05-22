@@ -60,6 +60,8 @@ Nếu chủ đề đã tồn tại, câu hỏi mới sẽ được thêm vào ch
 
 **Thi thử (Exam)** — Chọn số lượng câu hỏi, trả lời hết, nộp bài và xem điểm kèm phần review chi tiết từng câu đúng/sai.
 
+Khi bộ câu hỏi có nhiều hơn 1 chương, cả hai chế độ (kể cả link chia sẻ) sẽ hiện danh sách chương để tick chọn. Ở chế độ thi thử, số câu yêu cầu được phân bổ cho các chương đã chọn theo **độ quan trọng** — mỗi chương được chọn có ít nhất 1 câu và tổng đúng bằng số câu yêu cầu.
+
 ### Thống kê
 
 Xem tỷ lệ chính xác theo chủ đề, lịch sử làm bài và điểm cao nhất/trung bình tại `/stats`.
@@ -71,10 +73,15 @@ Câu hỏi được import dưới dạng JSON với cấu trúc sau:
 ```json
 {
   "subject": "Tên chủ đề",
+  "chapters": [
+    {"id": 1, "name": "Chương 1 - Giới thiệu", "importance": 4},
+    {"id": 2, "name": "Chương 2 - Phần A", "importance": 10}
+  ],
   "questions": [
     {
       "content": "Nội dung câu hỏi?",
       "explanation": "Giải thích tùy chọn, hiển thị khi xem kết quả",
+      "chapter_id": 2,
       "answers": [
         {"label": "A", "content": "Đáp án thứ nhất", "is_correct": false},
         {"label": "B", "content": "Đáp án thứ hai", "is_correct": true},
@@ -86,12 +93,19 @@ Câu hỏi được import dưới dạng JSON với cấu trúc sau:
 }
 ```
 
+`chapters` là tùy chọn. Bỏ qua `chapters` (và `chapter_id`) cho bộ câu hỏi không phân chương — tất cả câu hỏi sẽ vào một chương "Mặc định" tự tạo và giao diện chọn chương sẽ không hiển thị.
+
 ### Mô tả các trường
 
 | Trường | Kiểu | Bắt buộc | Mô tả |
 |--------|------|----------|-------|
 | `subject` | string | có | Tên chủ đề. Nếu đã tồn tại, câu hỏi sẽ được thêm vào |
+| `chapters` | array | không | Danh sách chương. Bỏ qua nếu không phân chương |
+| `chapters[].id` | integer | có (trong file) | Id cục bộ của chương, được câu hỏi tham chiếu qua `chapter_id` |
+| `chapters[].name` | string | không | Tên chương. Thiếu → lấy bằng `id` |
+| `chapters[].importance` | integer | không | Độ quan trọng 1–10 (mặc định 5). Chương quan trọng hơn được lấy nhiều câu hơn khi thi thử |
 | `questions` | array | có | Danh sách câu hỏi |
+| `questions[].chapter_id` | integer | không | Trỏ tới `chapters[].id`. Bỏ qua → vào chương "Mặc định" |
 | `questions[].content` | string | có | Nội dung câu hỏi |
 | `questions[].explanation` | string | không | Giải thích hiển thị khi xem kết quả. Chỉ thêm khi đáp án không hiển nhiên hoặc cần làm rõ |
 | `questions[].answers` | array | có | Danh sách đáp án (thường là 4) |
@@ -107,6 +121,7 @@ Câu hỏi được import dưới dạng JSON với cấu trúc sau:
 - `multi_answer` tự động phát hiện nếu bỏ qua: câu hỏi có 2+ đáp án đúng tự động được xem là nhiều đáp án
 - Label phải duy nhất trong mỗi câu hỏi (A, B, C, D)
 - Không giới hạn số đáp án mỗi câu, nhưng 4 là tiêu chuẩn
+- Các trường chương được **tự sửa thay vì báo lỗi**: thiếu `name` → lấy bằng `id`, `importance` được kẹp về 1–10 (mặc định 5), `chapter_id` chưa khai báo trong `chapters` sẽ được tự tạo
 
 ## Tạo câu hỏi bằng AI
 

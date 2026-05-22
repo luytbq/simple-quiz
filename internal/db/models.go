@@ -11,9 +11,20 @@ type Subject struct {
 	QuestionCount int // populated by queries, not stored
 }
 
+type Chapter struct {
+	ID            int64
+	SubjectID     int64
+	Name          string
+	Importance    int
+	OrderNumber   int
+	CreatedAt     time.Time
+	QuestionCount int // populated by queries, not stored
+}
+
 type Question struct {
 	ID          int64
 	SubjectID   int64
+	ChapterID   *int64
 	Content     string
 	Explanation string
 	MultiAnswer bool
@@ -71,13 +82,24 @@ type SubjectStats struct {
 // Import format structs
 type ImportData struct {
 	Subject   string           `json:"subject"`
+	Chapters  []ImportChapter  `json:"chapters,omitempty"`
 	Questions []ImportQuestion `json:"questions"`
+}
+
+// ImportChapter declares a chapter in the import file. ID is a file-local
+// identifier that questions reference via ImportQuestion.ChapterID; it is not
+// the database id.
+type ImportChapter struct {
+	ID         int    `json:"id"`
+	Name       string `json:"name"`
+	Importance int    `json:"importance,omitempty"` // defaults to DefaultImportance
 }
 
 type ImportQuestion struct {
 	Content     string         `json:"content"`
 	Explanation string         `json:"explanation,omitempty"`
 	MultiAnswer *bool          `json:"multi_answer,omitempty"` // auto-detected if not set
+	ChapterID   *int           `json:"chapter_id,omitempty"`   // references ImportChapter.ID
 	Answers     []ImportAnswer `json:"answers"`
 }
 
