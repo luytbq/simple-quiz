@@ -52,7 +52,7 @@ docker compose exec quiz ./quiz import /data/questions.json
 
 Truy cập `http://localhost:8080/import`, paste JSON vào textarea và submit.
 
-Nếu chủ đề đã tồn tại, câu hỏi mới sẽ được thêm vào chủ đề đó.
+Nếu chủ đề đã tồn tại (trùng tên), màn xem trước sẽ cho chọn **Thay thế toàn bộ** hoặc **Thêm vào** chủ đề đó. (Bản dòng lệnh `./quiz import` luôn thêm vào.)
 
 ### Chế độ luyện tập
 
@@ -99,7 +99,7 @@ Câu hỏi được import dưới dạng JSON với cấu trúc sau:
 
 | Trường | Kiểu | Bắt buộc | Mô tả |
 |--------|------|----------|-------|
-| `subject` | string | có | Tên chủ đề. Nếu đã tồn tại, câu hỏi sẽ được thêm vào |
+| `subject` | string | có | Tên chủ đề. Nếu trùng tên đề đã có, màn import cho chọn Thay thế hoặc Thêm vào |
 | `chapters` | array | không | Danh sách chương. Bỏ qua nếu không phân chương |
 | `chapters[].id` | integer | có (trong file) | Id cục bộ của chương, được câu hỏi tham chiếu qua `chapter_id` |
 | `chapters[].name` | string | không | Tên chương. Thiếu → lấy bằng `id` |

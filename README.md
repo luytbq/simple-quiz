@@ -37,9 +37,9 @@ docker compose up --build
 
 ### Import Questions
 
-**Web UI:** Go to `/manage`, paste JSON, click "Kiểm tra" to preview, then "Xác nhận Import".
+**Web UI:** Go to `/manage`, paste JSON, click "Kiểm tra" to preview, then "Xác nhận Import". If a subject with the same name already exists, the preview offers a choice: **replace** the existing set or **append** to it.
 
-**CLI:** `./quiz import questions.json`
+**CLI:** `./quiz import questions.json` (always appends when the subject name already exists)
 
 The app auto-fixes common issues: strips markdown wrappers, trailing commas, extra text around JSON, and single-backtick code blocks.
 

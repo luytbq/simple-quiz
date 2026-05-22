@@ -72,6 +72,6 @@ Single-binary Go web app (Go 1.22+ ServeMux, html/template, modernc.org/sqlite).
 **Key behaviors**:
 - Flashcard mode avoids repeat questions by tracking answered IDs in `attempt_answers` and excluding them via `NOT IN`
 - Answer order is shuffled at read time (not stored), using `math/rand/v2`
-- Subject import is upsert: if subject name exists, questions are appended
+- Subject import by name: CLI (`./quiz import`) appends when the subject name already exists. The web import preview (`CheckImport` → `import_preview.html`) detects an existing name (`FindSubjectByName`) and lets the user choose **Thay thế** (sends `subject_id` → `ReplaceSubject`) or **Thêm vào** (no `subject_id` → `ImportQuestions` append)
 - Chapters: each question belongs to a chapter with `importance` 1-10 (default 5). Setup pages (`exam_setup`, `practice_setup`, `share`) show a chapter chooser only when a subject has >1 chapter. The selected chapter ids are persisted per attempt in `attempt_chapters` so `ExamTake`/`PracticeQuestion` can re-apply the filter.
 - Exam question allocation across chapters lives in `allocateQuestions` (`internal/service/chapter.go`): distributes the requested count by importance, guaranteeing (in priority order) exact total → ≥1 per selected chapter → proportional split, with each chapter capped at its available questions.

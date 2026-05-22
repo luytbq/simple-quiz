@@ -161,6 +161,32 @@ func TestGetSubject(t *testing.T) {
 	}
 }
 
+func TestFindSubjectByName(t *testing.T) {
+	d := setupTestDB(t)
+	qs := &QuestionService{DB: d}
+
+	// Not found → nil, nil (no error)
+	got, err := qs.FindSubjectByName("Nope")
+	if err != nil {
+		t.Fatalf("FindSubjectByName(missing): unexpected error %v", err)
+	}
+	if got != nil {
+		t.Errorf("expected nil for missing subject, got %+v", got)
+	}
+
+	sub, _, _ := qs.ImportQuestions(sampleImportData())
+	got, err = qs.FindSubjectByName("Go Basics")
+	if err != nil {
+		t.Fatalf("FindSubjectByName: %v", err)
+	}
+	if got == nil || got.ID != sub.ID {
+		t.Fatalf("expected subject id %d, got %+v", sub.ID, got)
+	}
+	if got.QuestionCount != 2 {
+		t.Errorf("expected QuestionCount=2, got %d", got.QuestionCount)
+	}
+}
+
 func TestGetSubject_NotFound(t *testing.T) {
 	d := setupTestDB(t)
 	qs := &QuestionService{DB: d}

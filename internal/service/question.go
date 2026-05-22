@@ -52,6 +52,26 @@ func (s *QuestionService) GetSubject(id int64) (*db.Subject, error) {
 	return &sub, nil
 }
 
+// FindSubjectByName returns the subject with the given name (with its question
+// count), or nil if no such subject exists.
+func (s *QuestionService) FindSubjectByName(name string) (*db.Subject, error) {
+	var sub db.Subject
+	err := s.DB.QueryRow(`
+		SELECT s.id, s.name, s.description, s.share_code, s.created_at, COUNT(q.id)
+		FROM subjects s
+		LEFT JOIN questions q ON q.subject_id = s.id
+		WHERE s.name = ?
+		GROUP BY s.id
+	`, name).Scan(&sub.ID, &sub.Name, &sub.Description, &sub.ShareCode, &sub.CreatedAt, &sub.QuestionCount)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &sub, nil
+}
+
 func (s *QuestionService) GetSubjectByShareCode(code string) (*db.Subject, error) {
 	var sub db.Subject
 	err := s.DB.QueryRow(`

@@ -86,14 +86,25 @@ func (h *Handler) CheckImport(w http.ResponseWriter, r *http.Request) {
 	// Re-serialize refined data for hidden form
 	refinedJSON, _ := json.MarshalIndent(result.Data, "", "  ")
 
-	h.render(w, "import_preview.html", map[string]any{
+	data := map[string]any{
 		"Failed":      false,
 		"Data":        result.Data,
 		"Changes":     result.Changes,
 		"RefinedJSON": string(refinedJSON),
 		"Preview":     result.Data.Questions,
 		"SubjectID":   subjectID,
-	})
+	}
+
+	// Paste flow (no explicit subject_id): if a subject with this name already
+	// exists, offer the user a choice between replacing it and appending.
+	if subjectID == "" {
+		if existing, err := h.Questions.FindSubjectByName(result.Data.Subject); err == nil && existing != nil {
+			data["ExistingSubjectID"] = existing.ID
+			data["ExistingCount"] = existing.QuestionCount
+		}
+	}
+
+	h.render(w, "import_preview.html", data)
 }
 
 func (h *Handler) ConfirmImport(w http.ResponseWriter, r *http.Request) {

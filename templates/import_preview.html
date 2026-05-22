@@ -66,13 +66,36 @@
 <p><em>... và {{add (len .Preview) -3}} câu nữa</em></p>
 {{end}}
 
+{{if .ExistingSubjectID}}
+<article class="msg-info">Đề "<strong>{{.Data.Subject}}</strong>" đã tồn tại ({{.ExistingCount}} câu hỏi). Bạn muốn thay thế toàn bộ hay thêm vào đề hiện có?</article>
+{{end}}
+
 <form method="POST" action="{{bp}}/manage/confirm">
     <textarea name="refined_json" hidden>{{.RefinedJSON}}</textarea>
-    {{if .SubjectID}}<input type="hidden" name="subject_id" value="{{.SubjectID}}">{{end}}
+    {{if .SubjectID}}
+    {{/* Edit flow: cập nhật (thay thế) chính đề đang sửa */}}
+    <input type="hidden" name="subject_id" value="{{.SubjectID}}">
     <div class="grid" style="align-items:stretch">
-        <a href="{{if .SubjectID}}{{bp}}/manage/{{.SubjectID}}/edit{{else}}{{bp}}/manage{{end}}" role="button" class="outline" style="display:flex;align-items:center;justify-content:center;margin:0">← Quay lại</a>
-        <button type="submit" style="margin:0">{{if .SubjectID}}Xác nhận Cập nhật{{else}}Xác nhận Import{{end}}</button>
+        <a href="{{bp}}/manage/{{.SubjectID}}/edit" role="button" class="outline" style="display:flex;align-items:center;justify-content:center;margin:0">← Quay lại</a>
+        <button type="submit" style="margin:0">Xác nhận Cập nhật</button>
     </div>
+    {{else if .ExistingSubjectID}}
+    {{/* Paste flow nhưng trùng tên: cho chọn thêm vào hoặc thay thế */}}
+    <div class="grid" style="align-items:stretch">
+        <a href="{{bp}}/manage" role="button" class="outline" style="display:flex;align-items:center;justify-content:center;margin:0">← Quay lại</a>
+        <button type="submit" class="outline" style="margin:0">Thêm vào đề hiện có</button>
+        <button type="submit" name="subject_id" value="{{.ExistingSubjectID}}" style="margin:0"
+                onclick="return confirm('Thay thế sẽ XOÁ {{.ExistingCount}} câu hỏi hiện có của đề này rồi nạp đề mới. Tiếp tục?')">
+            Thay thế toàn bộ
+        </button>
+    </div>
+    {{else}}
+    {{/* Đề hoàn toàn mới */}}
+    <div class="grid" style="align-items:stretch">
+        <a href="{{bp}}/manage" role="button" class="outline" style="display:flex;align-items:center;justify-content:center;margin:0">← Quay lại</a>
+        <button type="submit" style="margin:0">Xác nhận Import</button>
+    </div>
+    {{end}}
 </form>
 {{end}}
 
