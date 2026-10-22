@@ -2,7 +2,6 @@ package service
 
 import (
 	"database/sql"
-	"time"
 
 	"quiz/internal/db"
 )
@@ -128,12 +127,11 @@ func (s *AttemptService) FinishAttempt(attemptID int64) (*db.ExamAttempt, error)
 		score = float64(correctCount) / float64(totalQuestions) * 100
 	}
 
-	now := time.Now()
 	_, err = s.DB.Exec(`
 		UPDATE exam_attempts
-		SET correct_count = ?, total_questions = ?, score = ?, finished_at = ?
+		SET correct_count = ?, total_questions = ?, score = ?, finished_at = CURRENT_TIMESTAMP
 		WHERE id = ?
-	`, correctCount, totalQuestions, score, now, attemptID)
+	`, correctCount, totalQuestions, score, attemptID)
 	if err != nil {
 		return nil, err
 	}

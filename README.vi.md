@@ -37,6 +37,7 @@ docker compose exec quiz ./quiz import /data/questions.json
 |------|----------|-------|
 | `PORT` | `8080` | Cổng server |
 | `DB_PATH` | `quiz.db` | Đường dẫn file database SQLite |
+| `DISPLAY_TZ` | `Asia/Ho_Chi_Minh` | Múi giờ IANA dùng để hiển thị thời gian (database luôn lưu UTC) |
 
 ## Cách sử dụng
 

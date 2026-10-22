@@ -422,3 +422,20 @@ td.actions {
     color: #fff;
 }
 
+
+article table {
+    width: auto;
+    margin: 0.75rem 0;
+    font-weight: normal;
+}
+
+article th,
+article td {
+    padding: 0.4rem 0.75rem;
+    border: 1px solid var(--pico-muted-border-color, #e0e0e0);
+}
+
+.question-content table {
+    display: block;
+    overflow-x: auto;
+}

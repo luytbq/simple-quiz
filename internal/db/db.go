@@ -3,6 +3,8 @@ package db
 import (
 	"database/sql"
 	"fmt"
+	"strings"
+	"time"
 
 	_ "modernc.org/sqlite"
 )
@@ -41,7 +43,72 @@ func Migrate(db *sql.DB) error {
 	} {
 		db.Exec(col) // ignore "duplicate column" errors
 	}
+	if err := normalizeFinishedAt(db); err != nil {
+		return err
+	}
 	return backfillDefaultChapters(db)
+}
+
+// sqliteTimeLayout matches what CURRENT_TIMESTAMP produces; every timestamp
+// column holds UTC in this layout so that string ordering equals time ordering.
+const sqliteTimeLayout = "2006-01-02 15:04:05"
+
+// normalizeFinishedAt rewrites finished_at values that were stored as Go's
+// time.String() output (local offset plus a " m=+..." monotonic suffix) into
+// UTC sqliteTimeLayout. Idempotent: normalized rows no longer match the filter.
+func normalizeFinishedAt(db *sql.DB) error {
+	rows, err := db.Query("SELECT id, CAST(finished_at AS TEXT) FROM exam_attempts WHERE finished_at IS NOT NULL AND length(CAST(finished_at AS TEXT)) > 19")
+	if err != nil {
+		return err
+	}
+	type fix struct {
+		id int64
+		ts string
+	}
+	var fixes []fix
+	for rows.Next() {
+		var id int64
+		var raw string
+		if err := rows.Scan(&id, &raw); err != nil {
+			rows.Close()
+			return err
+		}
+		if i := strings.Index(raw, " m="); i >= 0 {
+			raw = raw[:i]
+		}
+		t, err := parseLegacyTime(raw)
+		if err != nil {
+			continue
+		}
+		fixes = append(fixes, fix{id, t.UTC().Format(sqliteTimeLayout)})
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return err
+	}
+	for _, f := range fixes {
+		if _, err := db.Exec("UPDATE exam_attempts SET finished_at = ? WHERE id = ?", f.ts, f.id); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func parseLegacyTime(s string) (time.Time, error) {
+	var lastErr error
+	for _, layout := range []string{
+		"2006-01-02 15:04:05.999999999 -0700 MST",
+		"2006-01-02 15:04:05.999999999 -0700 -07",
+		time.RFC3339Nano,
+		"2006-01-02 15:04:05.999999999-07:00",
+	} {
+		t, err := time.Parse(layout, s)
+		if err == nil {
+			return t, nil
+		}
+		lastErr = err
+	}
+	return time.Time{}, lastErr
 }
 
 // backfillDefaultChapters ensures every question belongs to a chapter. For any

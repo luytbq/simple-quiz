@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	// Embedded so DISPLAY_TZ works on images without system zoneinfo (alpine).
+	_ "time/tzdata"
 
 	"quiz/cmd"
 	"quiz/internal/db"

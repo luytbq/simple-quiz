@@ -32,6 +32,7 @@ docker compose up --build
 | `PORT` | `8080` | Server port |
 | `DB_PATH` | `quiz.db` | SQLite database file path |
 | `BASE_PATH` | (empty) | URL prefix for reverse proxy (e.g. `/exams`) |
+| `DISPLAY_TZ` | `Asia/Ho_Chi_Minh` | IANA timezone used to display timestamps (the database always stores UTC) |
 
 ## Usage
 

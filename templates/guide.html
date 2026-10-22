@@ -80,6 +80,8 @@ Yêu cầu:
     single backtick cho inline code: "`value`"
   + Sơ đồ có cấu trúc (flowchart, UML, ER,
     sequence diagram): dùng ```mermaid block
+  + Dữ liệu dạng bảng: dùng bảng Markdown
+    (| Cột 1 | Cột 2 |\n|---|---|\n| a | b |)
   + Minh hoạ khác (stack, bộ nhớ, truth table,
     cây nhị phân): dùng ASCII art trong ``` block
 
@@ -145,6 +147,7 @@ Yêu cầu:
     Ví dụ: \n```java\ncode here\n```\n
   + Đáp án là code ngắn: dùng inline code "`value`"
   + Sơ đồ có cấu trúc: dùng ```mermaid block
+  + Dữ liệu dạng bảng: dùng bảng Markdown (| a | b |\n|---|---|)
   + Minh hoạ khác: dùng ASCII art trong ``` block
 
 Chỉ trả về JSON hợp lệ, không giải thích:
@@ -234,7 +237,7 @@ Chỉ trả về JSON hợp lệ, không giải thích:
     <h3>5. Loại câu hỏi</h3>
     <p><strong>Một đáp án:</strong> Hiển thị dạng radio button — chọn 1 đáp án duy nhất.</p>
     <p><strong>Nhiều đáp án:</strong> Hiển thị dạng checkbox kèm ghi chú <em>"(Chọn nhiều đáp án)"</em> — phải chọn đúng tất cả đáp án đúng mới được tính điểm.</p>
-    <p><strong>Rich content:</strong> Câu hỏi và đáp án hỗ trợ Markdown — code blocks, in đậm/nghiêng, hình ảnh base64.</p>
+    <p><strong>Rich content:</strong> Câu hỏi và đáp án hỗ trợ Markdown — code blocks, bảng, in đậm/nghiêng, hình ảnh base64.</p>
 </article>
 
 

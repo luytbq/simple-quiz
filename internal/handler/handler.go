@@ -7,6 +7,7 @@ import (
 	"io/fs"
 	"log/slog"
 	"net/http"
+	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -14,12 +15,34 @@ import (
 
 	"github.com/microcosm-cc/bluemonday"
 	"github.com/yuin/goldmark"
+	"github.com/yuin/goldmark/extension"
 	"quiz/internal/service"
 )
 
 var buildVersion = fmt.Sprintf("%d", time.Now().Unix())
 
-var mdRenderer = goldmark.New()
+// displayLocation is the timezone timestamps are shown in. The database always
+// stores UTC; conversion happens only at render time.
+var displayLocation = loadDisplayLocation()
+
+func loadDisplayLocation() *time.Location {
+	name := os.Getenv("DISPLAY_TZ")
+	if name == "" {
+		name = "Asia/Ho_Chi_Minh"
+	}
+	loc, err := time.LoadLocation(name)
+	if err != nil {
+		slog.Warn("invalid DISPLAY_TZ, falling back to UTC", "tz", name, "error", err)
+		return time.UTC
+	}
+	return loc
+}
+
+func localTime(t time.Time, layout string) string {
+	return t.In(displayLocation).Format(layout)
+}
+
+var mdRenderer = goldmark.New(goldmark.WithExtensions(extension.Table, extension.Strikethrough))
 
 var sanitizePolicy = func() *bluemonday.Policy {
 	p := bluemonday.UGCPolicy()
@@ -98,6 +121,7 @@ func New(qs *service.QuestionService, as *service.AttemptService, templateFS fs.
 		"v":  func() string { return buildVersion },
 		"md":  func(s string) template.HTML { return template.HTML(renderMd(s)) },
 		"mdi": func(s string) template.HTML { return template.HTML(renderMdi(s)) },
+		"localTime": localTime,
 	}
 
 	pages := []string{

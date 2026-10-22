@@ -69,7 +69,7 @@
         <tr class="subject-row" data-name="{{.Name}}">
             <td>{{.Name}}</td>
             <td>{{.QuestionCount}}</td>
-            <td>{{.CreatedAt.Format "02/01/2006"}}</td>
+            <td>{{localTime .CreatedAt "02/01/2006"}}</td>
             <td class="actions">
                 <button class="btn-share" data-target="share-{{.ID}}">Share</button>
                 <a href="{{bp}}/manage/{{.ID}}/export"

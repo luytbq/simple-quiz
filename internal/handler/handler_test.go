@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestConvertMermaidBlocks(t *testing.T) {
@@ -81,6 +82,11 @@ func TestRenderMd(t *testing.T) {
 			name:     "inline code",
 			input:    "Use `foo` here",
 			contains: []string{"<code>foo</code>"},
+		},
+		{
+			name:     "GFM table",
+			input:    "| Việc | Ngày |\n|---|---|\n| a | 2 |",
+			contains: []string{"<table>", "<th>Việc</th>", "<td>a</td>", "<td>2</td>"},
 		},
 		{
 			name:     "script tag sanitized",
@@ -177,6 +183,17 @@ func TestRenderMdi_ValidHTMLForMultiParagraph(t *testing.T) {
 	}
 	if openP < 2 {
 		t.Errorf("expected at least 2 paragraphs, got %q", result)
+	}
+}
+
+func TestLocalTimeConvertsUTCToDisplayLocation(t *testing.T) {
+	saved := displayLocation
+	defer func() { displayLocation = saved }()
+	displayLocation = time.FixedZone("ICT", 7*3600)
+
+	got := localTime(time.Date(2026, 5, 22, 16, 22, 0, 0, time.UTC), "02/01/2006 15:04")
+	if got != "22/05/2026 23:22" {
+		t.Fatalf("got %q, want 22/05/2026 23:22", got)
 	}
 }
 
